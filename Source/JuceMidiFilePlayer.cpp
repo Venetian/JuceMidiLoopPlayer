@@ -10,7 +10,7 @@
 
 #define COPY_TRACK_CHANNEL 1
 
-
+#include <sys/time.h>
 /*
 TO DO:
 bug on playing - check how first bar gets played
@@ -84,6 +84,11 @@ void JuceMidiFilePlayer::reset(){
     beatMillisCounter = 0;//position of millisCounter at last beat
     beatTick = 0;//counter set every time incoming beat happens
     midiPlayIndex = -1;//index in sequence we have played
+    
+    lastAltBeatTimeMillis = 0;
+    lastAltBeatTimeTicks = 0;
+    beatsReceived.clear();
+    beatPeriod = 500;//in case
 }
 
 void JuceMidiFilePlayer::stopMidiPlayback(){
@@ -97,7 +102,7 @@ void JuceMidiFilePlayer::stopMidiPlayback(){
 //this is called from Ableton via oscAbletonFinder in Juce
 //we then need to do our own clocking, knowing the Ableton tempo
 //to work out what MIDI notes need scheduling when
-void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis){
+void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis, int latency){
     if (beatIndex == 0){
         stopMidiPlayback();
         return;
@@ -111,8 +116,13 @@ void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis){
     } else {
         updatePlaybackToBeat(beatIndex);
         setTempo(tempoMillis);
+
     }
+    
+    alternativeBeatCall(beatIndex, tempoMillis, latency);
 }
+
+
 
 void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
     //THIS CLASS
@@ -127,6 +137,55 @@ void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
     beatMillisCounter = millisCounter;
     beatTick = beatIndex*ppq;
 }
+
+unsigned long JuceMidiFilePlayer::systemTime(){
+	struct timeval now;
+	gettimeofday( &now, NULL );
+	unsigned long timenow = (unsigned long long) now.tv_usec/1000 + (unsigned long long) now.tv_sec*1000;
+    //std::cout << "system time now " << timenow << " truncated " << (int)timenow << std::endl;
+    return timenow;
+}
+
+void JuceMidiFilePlayer::alternativeBeatCall(int& beatIndex, float& tempoMillis, int& latency){
+    unsigned long timenow = systemTime();
+    timenow -= latency;
+    
+    //we can check the time here - if there was latency - eg over network - we would eliminate it
+    //by scheduling accordingly
+    //for osc between programs on the same computer, zero latency
+    
+    AbletonBeat newBeat;
+    newBeat.index = beatIndex;
+    newBeat.tempo = tempoMillis;
+    newBeat.systemTime = timenow;
+
+    newBeat.millis = millisCounter - latency;//in case it takes some time to arrive
+    
+    std::cout << "beat period " << beatPeriod << std::endl;
+    
+    newBeat.ticks = millisToTicks(millisCounter-latency);
+    lastAltBeatTimeMillis = newBeat.millis;//put after ticks to millis
+    lastAltBeatTimeTicks = newBeat.ticks;//again after the other setting and before pushing this beat back
+    beatPeriod = tempoMillis;//after calc?
+    beatsReceived.push_back(newBeat);
+    
+    std::cout << "alt beat " << beatIndex << " tempo " << tempoMillis << " sys time " << timenow << " millis counter " << newBeat.millis << " ticks " << newBeat.ticks << std::endl;
+    
+}
+
+float JuceMidiFilePlayer::millisToTicks(int millis){
+    //get last beat and ticks there
+    float millisElapsed = millis - lastAltBeatTimeMillis;
+    //at current tempo in terms of ticks, this is
+    float ticksElapsed = (ppq*millisElapsed) /beatPeriod;
+    
+    return (ticksElapsed + lastAltBeatTimeTicks);
+
+}
+
+
+
+
 
 void JuceMidiFilePlayer::setTempo(float tempoMillis){
     //millis counter called once per millisecond

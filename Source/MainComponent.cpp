@@ -8,6 +8,9 @@
 
 #include "MainComponent.h"
 
+#include <sys/time.h>
+
+
 #define OSC_RECEIVER_PORT 12178
 //==============================================================================
 MainContentComponent::MainContentComponent() : finder("abletonSync", OSC_RECEIVER_PORT),
@@ -135,12 +138,19 @@ MainContentComponent::~MainContentComponent()
 
 
 
+
+
 void MainContentComponent::valueChanged(Value& value){
 
    // std::cout << "value changed " << std::endl;//(int)value.getValue() << std::endl;
 
     if (value == beatValue){
         beatInfo.setText("beat "+value.toString()+"  "+String(midiPlayer.looper.lastTick), dontSendNotification);//(int)value.getValue());
+        
+        //have ordered this so that we update tempo, systemtime and then Ableton beat index
+
+        newAbletonBeatReceived((int)beatValue.getValue(), (float)tempoValue.getValue(), (int)sysTimeValue.getValue());
+        
     } else if (value == sysTimeValue){
         systemTimeInfo.setText("sysTime "+value.toString(), dontSendNotification);
     } else if (value == tempoValue){
@@ -155,21 +165,30 @@ void MainContentComponent::valueChanged(Value& value){
         else if ((int)prophetReversedValue.getValue() == 2)
             prophetButton.setButtonText("inverted");
     }
-   
-    
-    newAbletonBeatReceived((int)beatValue.getValue(), (float)tempoValue.getValue());
-    
-    
-    
-    
 
 }
 
-void MainContentComponent::newAbletonBeatReceived(int beatIndex, float tempo){
+unsigned long systemTime(){
+	struct timeval now;
+	gettimeofday( &now, NULL );
+	unsigned long timenow = (unsigned long long) now.tv_usec/1000 + (unsigned long long) now.tv_sec*1000;
+    //std::cout << "system time now " << timenow << " truncated " << (int)timenow << std::endl;
+    return timenow;
+}
+
+void MainContentComponent::newAbletonBeatReceived(int beatIndex, float tempo, unsigned long systemTimeAbleton){
     //std::cout << "MCC: beat " << beatIndex << " tempo " << tempo << std::endl;
+    unsigned long systemTimeHere = systemTime();
+    int latency = systemTimeHere - systemTimeAbleton;
+    if (abs(latency) > 50){
+        std::cout << "weird latency error " << latency << "so setting to zero " << std::endl;
+        latency = 0;
+    } else
+        std::cout << "letency from Ableton Live is " << latency << std::endl;
+    
     if (beatIndex != lastBeatIndex){
         lastBeatIndex = beatIndex;
-        midiPlayer.newBeat(beatIndex, tempo);
+        midiPlayer.newBeat(beatIndex, tempo, latency);
     }
 }
 
@@ -188,45 +207,30 @@ void MainContentComponent::comboBoxChanged(ComboBox* box)//override
         midiOutputLooperDevice = MidiOutput::openDevice(midiLooperOutputBox.getSelectedItemIndex());
         midiPlayer.looper.midiOutDevice = midiOutputLooperDevice;
     } else if (box == &midiMoogInputBox){
-        
+        /*if (midiMoogInputBox.getSelectedItemIndex() != lastProphetInputIndex){//i.e. the other one
+            const StringArray list (MidiInput::getDevices());
+            deviceManager.removeMidiInputCallback (list[lastMoogInputIndex], this);
+            std::cout << "removing " << list[lastMoogInputIndex] << std::endl;
+        }*/
         setMidiInput(midiMoogInputBox.getSelectedItemIndex());
+        moogInputName = MidiInput::getDevices()[midiMoogInputBox.getSelectedItemIndex()];
+        lastMoogInputIndex = midiProphetInputBox.getSelectedItemIndex();
+        std::cout << "moog input is channel " << moogInputName << "index " << lastMoogInputIndex << std::endl;
+        
+    } else if (box == &midiProphetInputBox){
         /*
-        if (midiMoogInputDevice != nullptr)
-            midiMoogInputDevice->stop();
+        if (midiProphetInputBox.getSelectedItemIndex() != lastMoogInputIndex){//i.e. the other one
+            const StringArray list (MidiInput::getDevices());
+            deviceManager.removeMidiInputCallback (list[lastProphetInputIndex], this);
+            std::cout << "removing " << list[lastProphetInputIndex] << " index " << lastProphetInputIndex << std::endl;
+        }*/
         
-        midiMoogInputDevice = MidiInput::openDevice(midiMoogInputBox.getSelectedItemIndex(), this);
-        midiMoogInputDevice->start();
-        */
-        
-        /*
-        int index = 0;
-        const StringArray list (MidiInput::getDevices());
-        
-        std::cout << list.size() << std::endl;
-        
-        for (int i = 0; i < list.size(); i++)
-            std::cout << list[i].toStdString() << std::endl;
-        
-        
-        deviceManager.removeMidiInputCallback (list[lastInputIndex], this);
-        
-        const String newInput (list[index]);
-        
-        if (! deviceManager.isMidiInputEnabled (newInput))
-            deviceManager.setMidiInputEnabled (newInput, true);
-        
-        deviceManager.addMidiInputCallback (list[index], this);//MidiInput::getDevices()[midiMoogInputBox.getSelectedItemIndex()], this);
-        
-        //std::cout << "add midi call in " << index << " " << list[index] << std::endl;
-        */
-        
-  
-        //midiPlayer.looper.midiInputDevice = midiMoogInputDevice;
-
-        //replace above with this:
-        //setMidiInput(midiMoogInputBox.getSelectedItemIndex());
-       // std::cout << "set midi in " << midiMoogInputBox.getSelectedItemIndex() << " " << list[midiMoogInputBox.getSelectedItemIndex()] << std::endl;
+        setMidiInput(midiProphetInputBox.getSelectedItemIndex());
+        prophetInputName = MidiInput::getDevices()[midiProphetInputBox.getSelectedItemIndex()];
+        lastProphetInputIndex = midiProphetInputBox.getSelectedItemIndex();
+        //, "prophet");
     }
+    
     
 }
 
@@ -239,6 +243,11 @@ void MainContentComponent::handleIncomingMidiMessage (MidiInput* source, const M
     std::cout << "midi in '" << source->getName() << "' " << message.getRawDataSize() << " bytes" << std::endl;
     //std::cout << source.getDevice
     
+    if (source->getName() == moogInputName)
+        midiPlayer.looper.newMidiMessage(message);
+    else if (source->getName() == prophetInputName)
+        midiPlayer.prophet.newMidiMessage(message);
+
 }
 
 
@@ -246,7 +255,7 @@ void MainContentComponent::setMidiInput (int index)
 {
     const StringArray list (MidiInput::getDevices());
     
-    deviceManager.removeMidiInputCallback (list[lastInputIndex], this);
+//    deviceManager.removeMidiInputCallback (list[lastInputIndex], this);
     
     const String newInput (list[index]);
     
@@ -261,7 +270,6 @@ void MainContentComponent::setMidiInput (int index)
     //midiMoogInputBox.setSelectedId (index + 1, dontSendNotification);
     //was midiInputList line above
     
-    lastInputIndex = index;
 }
 
 void newInput(){
@@ -324,3 +332,45 @@ void MainContentComponent::resized()
     
     prophetButton.setBoundsRelative(0.35, 0.25, 0.25, 0.05);
 }
+
+
+
+/*
+ 
+ JUNK MIDI INPUT STUFF
+ if (midiMoogInputDevice != nullptr)
+ midiMoogInputDevice->stop();
+ 
+ midiMoogInputDevice = MidiInput::openDevice(midiMoogInputBox.getSelectedItemIndex(), this);
+ midiMoogInputDevice->start();
+ */
+
+/*
+ int index = 0;
+ const StringArray list (MidiInput::getDevices());
+ 
+ std::cout << list.size() << std::endl;
+ 
+ for (int i = 0; i < list.size(); i++)
+ std::cout << list[i].toStdString() << std::endl;
+ 
+ 
+ deviceManager.removeMidiInputCallback (list[lastInputIndex], this);
+ 
+ const String newInput (list[index]);
+ 
+ if (! deviceManager.isMidiInputEnabled (newInput))
+ deviceManager.setMidiInputEnabled (newInput, true);
+ 
+ deviceManager.addMidiInputCallback (list[index], this);//MidiInput::getDevices()[midiMoogInputBox.getSelectedItemIndex()], this);
+ 
+ //std::cout << "add midi call in " << index << " " << list[index] << std::endl;
+ */
+
+
+//midiPlayer.looper.midiInputDevice = midiMoogInputDevice;
+
+//replace above with this:
+//setMidiInput(midiMoogInputBox.getSelectedItemIndex());
+// std::cout << "set midi in " << midiMoogInputBox.getSelectedItemIndex() << " " << list[midiMoogInputBox.getSelectedItemIndex()] << std::endl;
+

@@ -167,6 +167,13 @@ void JuceSequenceLoopPlayer::sendMessageOut(MidiMessage& m){
 
 
 
+void JuceSequenceLoopPlayer::newMidiMessage(const MidiMessage& message){
+    const uint8* data = message.getRawData();
+    std::cout << name << " received " << (int)data[0] << ", " << (int)data[1] << ", " << (int)data[2] << std::endl;
+}
+
+
+
 void JuceSequenceLoopPlayer::updateMidiPlayPositionToTickPosition(double startTick, double tickPosition){
   
     int numEvents = transformedSequence.getNumEvents();
@@ -462,3 +469,4 @@ void transposeSequence(int notesInScale){
     
     
 }
+

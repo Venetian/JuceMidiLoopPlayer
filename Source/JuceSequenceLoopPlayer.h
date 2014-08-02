@@ -35,6 +35,8 @@ public:
     MidiOutput* midiOutDevice;
     MidiInput* midiInputDevice;
     
+    void newMidiMessage(const MidiMessage& message);
+    
     void updateTicksSinceLastBeat(double ticksSinceBeatTick);
     
     void updatePlaybackToBeat(int& beatIndex);//, int& millisCount);
@@ -47,6 +49,8 @@ public:
     void invertSequence(MidiMessageSequence& invertedSequence, const MidiMessageSequence& sequence, int startStamp, int endStamp);
     
     void setSequence(const MidiMessageSequence& sequence);
+    
+
 
     //transforms
     void reverseOriginal();

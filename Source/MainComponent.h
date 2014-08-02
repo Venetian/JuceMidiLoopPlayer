@@ -58,7 +58,7 @@ public:
 private:
     OSCAbletonFinder finder;
     
-    void newAbletonBeatReceived(int beatIndex, float tempo);
+    void newAbletonBeatReceived(int beatIndex, float tempo, unsigned long systemTimeAbleton);
     //menu for midi devices
     ComboBox midiOutputBox;
     ComboBox midiLooperOutputBox;
@@ -80,13 +80,14 @@ private:
     AudioDeviceManager deviceManager;
    // void handleIncomingMidiMessageInt (MidiInput*, const MidiMessage&);
     void setMidiInput (int index);
-    int lastInputIndex;
+    int lastMoogInputIndex;
+    int lastProphetInputIndex;
     
     ScopedPointer<MidiInput> midiProphetInputDevice;
     ScopedPointer<MidiInput> midiMoogInputDevice;
     
-    
-    
+    String moogInputName;//to help parse midi messages by channel
+    String prophetInputName;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };

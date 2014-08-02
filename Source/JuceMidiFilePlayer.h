@@ -14,6 +14,15 @@
 
 #include "JuceSequenceLoopPlayer.h"
 
+struct AbletonBeat{
+public:
+    int index;//
+    float tempo;//in millis per beat period
+    unsigned long systemTime;//as sent by ableton but truncated to int - not brilliant that aspect but should still work okay
+    float ticks;//in MIDI ticks - depends on the tempo of course
+    int millis;//internal millis counter
+};
+
 class JuceMidiFilePlayer : private HighResolutionTimer {
 public:
     JuceMidiFilePlayer();
@@ -25,16 +34,17 @@ public:
     void startMidiPlayback();
     void stopMidiPlayback();
 
-    void newBeat(int beatIndex, float tempoMillis);
+    void newBeat(int beatIndex, float tempoMillis, int latency);
     
     void reverseSequence(MidiMessageSequence& sequence, int startStamp, int endStamp);
+    
     JuceSequenceLoopPlayer looper;
     
     JuceSequenceLoopPlayer prophet;
     
     ScopedPointer<MidiOutput> midiDevice;
     
-
+    std::vector<AbletonBeat> beatsReceived;
     
 private:
     
@@ -44,13 +54,23 @@ private:
         updateMidiPlayPosition();
     }
 
+    float millisToTicks(int millis);
+    
     int ppq;
     int beatMillisCounter;//millis counter when on beat
     int beatTick;
     
+    
     int millisCounter;
+    int lastAltBeatTimeMillis;
+    float lastAltBeatTimeTicks;
+    float beatPeriod;
+    
     int midiPlayIndex;
     void reset();
+    
+    unsigned long systemTime();
+    void alternativeBeatCall(int& beatIndex, float& tempoMillis, int& latency);
     
     void setTempo(float tempoMillis);
     

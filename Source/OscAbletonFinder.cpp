@@ -47,7 +47,7 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
             arg++;
             if (arg->IsInt32()){
                 systemTime = arg->AsInt32();
-               // std::cout << "system time " << systemTime << std::endl;
+                //std::cout << "ableton system time " << systemTime << std::endl;
             }
             arg++;
             if (arg->IsFloat() || arg->IsInt32()){
@@ -55,17 +55,15 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
                 //std::cout << "tempo " <<  tempoMillis << std::endl;
             }
 
-            
+            //ordering is important below
             if (!halfTime){
                 tempoVal.setValue(tempoMillis);//first so we know tempo
-                beatVal.setValue(beat);
                 sysTimeVal.setValue(systemTime);
-                
+                beatVal.setValue(beat);
             } else if (beat % 2 == 1){
                 tempoVal.setValue(tempoMillis* 2);
-                beatVal.setValue((beat+1)/2) ;
                 sysTimeVal.setValue(systemTime);
-                
+                beatVal.setValue((beat+1)/2) ;
             }
             //newBeatReceived - add a listener?
         }
