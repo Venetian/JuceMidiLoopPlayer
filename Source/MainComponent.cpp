@@ -11,7 +11,7 @@
 #define OSC_RECEIVER_PORT 12178
 //==============================================================================
 MainContentComponent::MainContentComponent() : finder("abletonSync", OSC_RECEIVER_PORT),
-prophetButton("prophet reverse")
+prophetButton("prophet reverse")//, deviceManager()
 {
     setSize (500, 400);
 
@@ -188,20 +188,57 @@ void MainContentComponent::comboBoxChanged(ComboBox* box)//override
         midiOutputLooperDevice = MidiOutput::openDevice(midiLooperOutputBox.getSelectedItemIndex());
         midiPlayer.looper.midiOutDevice = midiOutputLooperDevice;
     } else if (box == &midiMoogInputBox){
+        
+        setMidiInput(midiMoogInputBox.getSelectedItemIndex());
+        /*
+        if (midiMoogInputDevice != nullptr)
+            midiMoogInputDevice->stop();
+        
         midiMoogInputDevice = MidiInput::openDevice(midiMoogInputBox.getSelectedItemIndex(), this);
-        midiPlayer.looper.midiInputDevice = midiMoogInputDevice;
+        midiMoogInputDevice->start();
+        */
+        
+        /*
+        int index = 0;
+        const StringArray list (MidiInput::getDevices());
+        
+        std::cout << list.size() << std::endl;
+        
+        for (int i = 0; i < list.size(); i++)
+            std::cout << list[i].toStdString() << std::endl;
+        
+        
+        deviceManager.removeMidiInputCallback (list[lastInputIndex], this);
+        
+        const String newInput (list[index]);
+        
+        if (! deviceManager.isMidiInputEnabled (newInput))
+            deviceManager.setMidiInputEnabled (newInput, true);
+        
+        deviceManager.addMidiInputCallback (list[index], this);//MidiInput::getDevices()[midiMoogInputBox.getSelectedItemIndex()], this);
+        
+        //std::cout << "add midi call in " << index << " " << list[index] << std::endl;
+        */
+        
+  
+        //midiPlayer.looper.midiInputDevice = midiMoogInputDevice;
 
         //replace above with this:
-        setMidiInput(midiMoogInputBox.getSelectedItemIndex());
-        std::cout << "set midi in " << midiMoogInputBox.getSelectedItemIndex() << std::endl;
+        //setMidiInput(midiMoogInputBox.getSelectedItemIndex());
+       // std::cout << "set midi in " << midiMoogInputBox.getSelectedItemIndex() << " " << list[midiMoogInputBox.getSelectedItemIndex()] << std::endl;
     }
     
 }
 
 
+//void MainContentComponent::handleIncomingMidiMessageMoog (MidiInput* source, const MidiMessage& message) {
+//    std::cout << "midi in moog" << std::endl;
+//}
 
 void MainContentComponent::handleIncomingMidiMessage (MidiInput* source, const MidiMessage& message) {
-    std::cout << "midi in" << std::endl;
+    std::cout << "midi in '" << source->getName() << "' " << message.getRawDataSize() << " bytes" << std::endl;
+    //std::cout << source.getDevice
+    
 }
 
 
@@ -219,8 +256,9 @@ void MainContentComponent::setMidiInput (int index)
     deviceManager.addMidiInputCallback (newInput, this);
     std::cout << "add callback " << newInput << std::endl;
     
+//    midiInputMoogdevice =
     //why this ??
-    midiMoogInputBox.setSelectedId (index + 1, dontSendNotification);
+    //midiMoogInputBox.setSelectedId (index + 1, dontSendNotification);
     //was midiInputList line above
     
     lastInputIndex = index;
