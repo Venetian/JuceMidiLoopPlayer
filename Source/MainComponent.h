@@ -21,7 +21,8 @@
     your controls and content.
 */
 class MainContentComponent   : public Component, public Value::Listener,
-                                public Label::Listener, public ComboBox::Listener// to listen to menu
+                                public Label::Listener, public ComboBox::Listener,// to listen to menu
+                                public Button::Listener, private MidiInputCallback
 {
 public:
     //==============================================================================
@@ -44,7 +45,14 @@ public:
     
     void comboBoxChanged(ComboBox* box) override;
     
+    //notes out for our two MIDI hardware devices
+    Label prophetLabel;
+    Label looperLabel;
     
+    Value prophetNoteValue;
+    
+    
+    void handleIncomingMidiMessage (MidiInput* source, const MidiMessage& message) ;
     
 private:
     OSCAbletonFinder finder;
@@ -53,10 +61,30 @@ private:
     //menu for midi devices
     ComboBox midiOutputBox;
     ComboBox midiLooperOutputBox;
-    ScopedPointer<MidiOutput> midiOutputDevice;
-    ScopedPointer<MidiOutput> midiOutputLooperDevice;
+    
+    ComboBox midiProphetInputBox;
+    ComboBox midiMoogInputBox;
+    
+    TextButton prophetButton;
+    Value prophetReversedValue;
+    void buttonClicked(Button* button);
+    
+    ScopedPointer<MidiOutput> midiOutputDevice;//prophet
+    ScopedPointer<MidiOutput> midiOutputLooperDevice;//moog
     
     JuceMidiFilePlayer midiPlayer;
+    int lastBeatIndex;
+ 
+    //for MIDI in and Audio In
+    AudioDeviceManager deviceManager;
+   // void handleIncomingMidiMessageInt (MidiInput*, const MidiMessage&);
+    void setMidiInput (int index);
+    int lastInputIndex;
+    
+    ScopedPointer<MidiInput> midiProphetInputDevice;
+    ScopedPointer<MidiInput> midiMoogInputDevice;
+    
+    
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)

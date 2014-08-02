@@ -21,7 +21,7 @@ public:
     
     MidiFile midiFile;
     
-    void loadMidiFile(String fileLocation);
+    MidiMessageSequence loadMidiFile(String fileLocation, bool mergeOn);
     void startMidiPlayback();
     void stopMidiPlayback();
 
@@ -29,6 +29,8 @@ public:
     
     void reverseSequence(MidiMessageSequence& sequence, int startStamp, int endStamp);
     JuceSequenceLoopPlayer looper;
+    
+    JuceSequenceLoopPlayer prophet;
     
     ScopedPointer<MidiOutput> midiDevice;
     
@@ -60,7 +62,7 @@ private:
     MidiMessageSequence trackSequence;//pointer to track we load in
     MidiMessageSequence::MidiEventHolder* playEvent;//pointer to an individual midi event
     
-    MidiMessageSequence loopSequence, mutatedSequence;//loop what we play, mutate for the transformed version
+    //MidiMessageSequence loopSequence, mutatedSequence;//loop what we play, mutate for the transformed version
 
     void printSequenceEvents(const MidiMessageSequence& sequence);//to see what is in sequences
     

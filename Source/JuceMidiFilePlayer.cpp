@@ -10,11 +10,21 @@
 
 #define COPY_TRACK_CHANNEL 1
 
+
+/*
+TO DO:
+bug on playing - check how first bar gets played
+
+scheduling with MidiBuffer
+
+transforms
+ */
+
 JuceMidiFilePlayer::JuceMidiFilePlayer(){
     playbackSpeed = 1.0;
     
     String location;
-    int fileToLoad = 2;
+    int fileToLoad = 4;
     switch (fileToLoad){
         case 0:
            location = "../../../../exampleMidiFiles/midiScale.mid";
@@ -32,17 +42,29 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
             location = "../../../../exampleMidiFiles/KingKongBassline.mid";
             break;
     }
-    
-    loadMidiFile(location);
-    
+    prophet.name = "PROPHET";
+    looper.name = "MOOG";
     midiDevice = NULL;
     
+    MidiMessageSequence loadedSequence = loadMidiFile(location, true);//true for merging all
+   
+    prophet.setSequence(loadedSequence, ppq);
+    
+    looper.setSequence(loadedSequence, ppq);
+    looper.printSequenceEvents(looper.transformedSequence);
+    std::cout << "LOADED" << std::endl;
+    
+//    looper.reverseOriginal();
+    looper.invertOriginal();
+    looper.printSequenceEvents(looper.transformedSequence);
     
 }
 
 JuceMidiFilePlayer::~JuceMidiFilePlayer(){
     stopTimer();
-   
+    
+
+    
     for (int i = 32; i < 96; i++){
         MidiMessage offmsg = MidiMessage::noteOff(COPY_TRACK_CHANNEL, i);
         if (midiDevice != NULL)
@@ -66,9 +88,15 @@ void JuceMidiFilePlayer::reset(){
 
 void JuceMidiFilePlayer::stopMidiPlayback(){
     stopTimer();
+    looper.stop();
+    prophet.stop();
+    
     
 }
 
+//this is called from Ableton via oscAbletonFinder in Juce
+//we then need to do our own clocking, knowing the Ableton tempo
+//to work out what MIDI notes need scheduling when
 void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis){
     if (beatIndex == 0){
         stopMidiPlayback();
@@ -87,12 +115,14 @@ void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis){
 }
 
 void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
-
-    updateMidiPlayPositionToTickPosition(beatIndex*ppq);
+    //THIS CLASS
+    //updateMidiPlayPositionToTickPosition(beatIndex*ppq);
     
-   // looper.getTicksFromBeat(beatIndex*ppq);
-    
+   
+   // looper.getTicksFromBeat(beatIndex*ppq);defunkt
     looper.updatePlaybackToBeat(beatIndex);//, millisCounter);
+    
+    prophet.updatePlaybackToBeat(beatIndex);
     
     beatMillisCounter = millisCounter;
     beatTick = beatIndex*ppq;
@@ -110,6 +140,7 @@ void JuceMidiFilePlayer::setTempo(float tempoMillis){
 
 
 void JuceMidiFilePlayer::updateMidiPlayPosition(){
+    //main fn called by clock
     
     //called every millis by the clock
     millisCounter++;
@@ -120,25 +151,27 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
 
 
 void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(double position){
-     updateMidiPlayPositionToTickPosition(loopSequence, position);
+    //THIS CLASS
+    //updateMidiPlayPositionToTickPosition(loopSequence, position);
     
     //time in ticks since beattick is position - beattick
  //for looper
-    looper.updateTicksSinceLastBeat(position - beatTick);
-    
+    position -= beatTick;
+    looper.updateTicksSinceLastBeat(position);//i.e. position-beatTick , time since beat happened
+    prophet.updateTicksSinceLastBeat(position);
 }
 
-
+/*
 void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(MidiMessageSequence& sequence, float tickPosition){
-    /*
+    
      //this not needed - we already have index from the last time
      //could be good check though?
-     int tmpCounter = (int)(millisCounter * playbackSpeed);
-     while (midiPlayIndex < numEvents && trackSequence.getEventTime(midiPlayIndex) < tmpCounter){
+    // int tmpCounter = (int)(millisCounter * playbackSpeed);
+    // while (midiPlayIndex < numEvents && trackSequence.getEventTime(midiPlayIndex) < tmpCounter){
      //we have caught up to where we are, maybe we should be optimising this though from last time it was called?
-     midiPlayIndex++;
-     }
-     */
+    // midiPlayIndex++;
+    // }
+     
     
     int numEvents = sequence.getNumEvents();
     int useCount = (int)tickPosition;//(int)(millisCounter * playbackSpeed);//relative to 1ms = 1 tick
@@ -182,7 +215,7 @@ void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(MidiMessageSequenc
     delete outputEvent;
     
 }
-
+*/
 
 //update a buffer to play
 //store an interator
@@ -241,12 +274,14 @@ void JuceMidiFilePlayer::updateMidiPlayPositionToTickPositionWithLooping(MidiMes
 
 */
 
-void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
+MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool mergeOn){
     
     //either add exmaplemidiFiles to your project or change this location
     File file(fileLocation);
     
     //TO DO: add some kind of check whether file exists!
+    
+    MidiMessageSequence loadedSequence;
     
     if (!file.isDirectory())
     {
@@ -270,11 +305,14 @@ void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
         
         for (int trackIndex = 0; trackIndex < midiFile.getNumTracks(); trackIndex++){
             
+            MidiMessageSequence emptySequence;
+            
             if (trackIndex < midiFile.getNumTracks()){
                 
                 //midi message sequence is pointer to a midi track, as loaded from a file
                 trackSequence = *midiFile.getTrack(trackIndex);//replaces empty holder with track 0
                 
+                /*
                 if (trackIndex == COPY_TRACK_CHANNEL || loopSequence.getNumEvents() == 0)
                     loopSequence = MidiMessageSequence(trackSequence);
                 else {
@@ -285,9 +323,10 @@ void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
                     //loopSequence.sort();
                     //loopSequence.updateMatchedPairs();
                 }
+                 */
                 
-                std::cout << " print midi track sequence as loaded, trackindex " << trackIndex << std::endl;
-                printSequenceEvents(trackSequence);
+                std::cout << "LOADER: print midi track sequence as loaded, trackindex " << trackIndex << std::endl;
+                //printSequenceEvents(trackSequence);
             
                 //trackSequence.deleteSysExMessages();
             
@@ -298,7 +337,7 @@ void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
                 for (int i = 0; i < trackSequence.getNumEvents(); i++){
                     //can get this time info from the track sequence
                     double eventTime = trackSequence.getEventTime(i);
-                    std::cout << "event " << i << ": time " << eventTime;//<< std::endl;
+                    std::cout << "Loading: event " << i << ": time " << eventTime;//<< std::endl;
                     
                     //or parse through the events themselves
                     event = trackSequence.getEventPointer(i);
@@ -324,7 +363,7 @@ void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
                        
                        
                         //event->message.setChannel(1);
-                        //loopSequence.addEvent(tmpMsg);//event->message);
+                        emptySequence.addEvent(tmpMsg);//event->message);
                     }
                     
                     std::cout << "data " << (int)data[0] << ", ";// std::endl;
@@ -340,6 +379,9 @@ void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
                 }//end for i
                 
                 trackSequence.updateMatchedPairs();
+                emptySequence.updateMatchedPairs();
+                
+                loadedSequence.addSequence(emptySequence, 0, 0, midiFile.getLastTimestamp());
                 
                 //loopSequence.addSequence(trackSequence, 0, 0, 100000000);
                // for (int channel = 0; channel < 16; channel++)
@@ -352,19 +394,18 @@ void JuceMidiFilePlayer::loadMidiFile(String fileLocation){
            // loopSequence.updateMatchedPairs();
            // loopSequence.sort();
             
-            
-
-           
-            
         }//end for track index
-    
+
+      
+        return loadedSequence;
+    /*
         std::cout << "LOOP seq " << std::endl;
         printSequenceEvents(loopSequence);
         
         
         std::cout << "\nREVERSING LOOP\n" << std::endl;
         reverseSequence(loopSequence, 0, 4*ppq);
-        
+      */
         
     }//end main if not dir
     
@@ -477,12 +518,18 @@ void JuceMidiFilePlayer::reverseSequence(MidiMessageSequence& sequence, int star
     printSequenceEvents(emptyLoop);
     
 //    loopSequence = emptyLoop;
-    mutatedSequence = emptyLoop;
+   // mutatedSequence = emptyLoop;
 
-    std::cout << "LOOPER" << std::endl;
+   //reversed
     looper.setSequence(emptyLoop, ppq);
-    looper.printSequenceEvents();
+    std::cout << "LOOPER" << std::endl;
+    looper.reverseOriginal();
     
+    looper.printSequenceEvents(looper.transformedSequence);
+    
+    prophet.setSequence(sequence, ppq);
+    std::cout << "PROPHET" << std::endl;
+//prophet.printSequenceEvents(prophet.transformedSequence);
     
 }
 

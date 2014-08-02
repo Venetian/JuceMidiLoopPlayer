@@ -14,9 +14,10 @@
 
 class OSCAbletonFinder : public OSCfinder{
 public:
+    
     using OSCfinder::OSCfinder;
     
-//    int* beat;
+//    int* beat; 
     int beat;
     int systemTime;
     float tempoMillis;
@@ -27,6 +28,7 @@ public:
     Value tempoVal;
 //    void valueChanged(Value* tmpValue);
     
+    bool halfTime;
 protected:
     //this is our main processing function
     //overwrite to to do other things with incoming osc messages
