@@ -149,7 +149,7 @@ void MainContentComponent::valueChanged(Value& value){
         
         //have ordered this so that we update tempo, systemtime and then Ableton beat index
 
-        newAbletonBeatReceived((int)beatValue.getValue(), (float)tempoValue.getValue(), (int)sysTimeValue.getValue());
+        newAbletonBeatReceived((float)beatValue.getValue(), (float)tempoValue.getValue(), (int)sysTimeValue.getValue());
         
     } else if (value == sysTimeValue){
         systemTimeInfo.setText("sysTime "+value.toString(), dontSendNotification);
@@ -176,8 +176,8 @@ unsigned long systemTime(){
     return timenow;
 }
 
-void MainContentComponent::newAbletonBeatReceived(int beatIndex, float tempo, unsigned long systemTimeAbleton){
-    //std::cout << "MCC: beat " << beatIndex << " tempo " << tempo << std::endl;
+void MainContentComponent::newAbletonBeatReceived(float beatIndex, float tempo, unsigned long systemTimeAbleton){
+    std::cout << "MCC: beat " << beatIndex << " tempo " << tempo << std::endl;
     unsigned long systemTimeHere = systemTime();
     int latency = systemTimeHere - systemTimeAbleton;
     if (abs(latency) > 50){

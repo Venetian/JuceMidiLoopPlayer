@@ -18,6 +18,9 @@ bug on playing - check how first bar gets played
 scheduling with MidiBuffer
 
 transforms
+ 
+ //storing  data about last beat times
+ //easier than accessing array every beat calculation
  */
 
 JuceMidiFilePlayer::JuceMidiFilePlayer(){
@@ -87,14 +90,23 @@ void JuceMidiFilePlayer::reset(){
     
     lastAltBeatTimeMillis = 0;
     lastAltBeatTimeTicks = 0;
+    lastAltBeatIndex = 0;
+    
     beatsReceived.clear();
     beatPeriod = 500;//in case
 }
 
 void JuceMidiFilePlayer::stopMidiPlayback(){
+    std::cout << "stop" << std::endl;
+    
     stopTimer();
     looper.stop();
     prophet.stop();
+    
+    for (int i = 0; i < beatsReceived.size(); i++){
+        std::cout << beatsReceived[i].index << " tempo " << beatsReceived[i].tempo << ", systime " << beatsReceived[i].systemTime << std::endl;
+    }
+    beatsReceived.clear();
     
     
 }
@@ -102,7 +114,7 @@ void JuceMidiFilePlayer::stopMidiPlayback(){
 //this is called from Ableton via oscAbletonFinder in Juce
 //we then need to do our own clocking, knowing the Ableton tempo
 //to work out what MIDI notes need scheduling when
-void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis, int latency){
+void JuceMidiFilePlayer::newBeat(float beatIndex, float tempoMillis, int latency){
     if (beatIndex == 0){
         stopMidiPlayback();
         return;
@@ -111,7 +123,7 @@ void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis, int latency){
     beatIndex--;//because we count from zero!
     if (beatIndex == 0){
         setTempo(tempoMillis);
-        startMidiPlayback();
+        startMidiPlayback();//alternative methods here too
         updatePlaybackToBeat(0);//
     } else {
         updatePlaybackToBeat(beatIndex);
@@ -119,7 +131,7 @@ void JuceMidiFilePlayer::newBeat(int beatIndex, float tempoMillis, int latency){
 
     }
     
-    alternativeBeatCall(beatIndex, tempoMillis, latency);
+    alternativeBeatCall(beatIndex, tempoMillis, latency);//the new zero indexed beats
 }
 
 
@@ -136,6 +148,8 @@ void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
     
     beatMillisCounter = millisCounter;
     beatTick = beatIndex*ppq;
+    
+
 }
 
 unsigned long JuceMidiFilePlayer::systemTime(){
@@ -146,13 +160,15 @@ unsigned long JuceMidiFilePlayer::systemTime(){
     return timenow;
 }
 
-void JuceMidiFilePlayer::alternativeBeatCall(int& beatIndex, float& tempoMillis, int& latency){
+void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMillis, int& latency){
     unsigned long timenow = systemTime();
     timenow -= latency;
     
     //we can check the time here - if there was latency - eg over network - we would eliminate it
     //by scheduling accordingly
     //for osc between programs on the same computer, zero latency
+    
+    float beatEstimate = millisToBeats(millisCounter);
     
     AbletonBeat newBeat;
     newBeat.index = beatIndex;
@@ -164,12 +180,13 @@ void JuceMidiFilePlayer::alternativeBeatCall(int& beatIndex, float& tempoMillis,
     std::cout << "beat period " << beatPeriod << std::endl;
     
     newBeat.ticks = millisToTicks(millisCounter-latency);
+    lastAltBeatIndex = beatIndex;
     lastAltBeatTimeMillis = newBeat.millis;//put after ticks to millis
     lastAltBeatTimeTicks = newBeat.ticks;//again after the other setting and before pushing this beat back
     beatPeriod = tempoMillis;//after calc?
     beatsReceived.push_back(newBeat);
     
-    std::cout << "alt beat " << beatIndex << " tempo " << tempoMillis << " sys time " << timenow << " millis counter " << newBeat.millis << " ticks " << newBeat.ticks << std::endl;
+    std::cout << "alt beat " << beatIndex << " tempo " << tempoMillis << " sys time " << timenow << " millis counter " << newBeat.millis << " ticks " << newBeat.ticks << ", beat estimate " << beatEstimate << std::endl;
     
 }
 
@@ -181,6 +198,17 @@ float JuceMidiFilePlayer::millisToTicks(int millis){
     
     return (ticksElapsed + lastAltBeatTimeTicks);
 
+}
+
+
+float JuceMidiFilePlayer::millisToBeats(const float& millis){
+    //get last beat and ticks there
+    //float millisElapsed = (millis - lastAltBeatTimeMillis);
+    //at current tempo in terms of ticks, this is
+    float beatsElapsed = (millis - lastAltBeatTimeMillis) /beatPeriod;
+    
+    return (beatsElapsed + lastAltBeatIndex);
+    
 }
 
 
@@ -205,7 +233,9 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
     millisCounter++;
     
     updateMidiPlayPositionToTickPosition(beatTick + ((millisCounter-beatMillisCounter)*playbackSpeed));
+ 
     
+    looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
 }
 
 

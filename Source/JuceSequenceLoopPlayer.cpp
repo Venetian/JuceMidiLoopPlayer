@@ -45,6 +45,10 @@ JuceSequenceLoopPlayer::JuceSequenceLoopPlayer(){
     loopStartTicks = 0;
     loopEndTicks = ppq*16;//4 beat loop of beginning
     
+    loopStartBeats = 0;
+    loopEndBeats = 16;
+    loopWidth = loopEndBeats-loopStartBeats;
+    
     name = "";
     
     midiPlayIndex = -1;
@@ -77,8 +81,29 @@ void JuceSequenceLoopPlayer::setSequence(const MidiMessageSequence& targetSequen
     transformedSequence = targetSequence;
     transformedSequence.updateMatchedPairs();
     ppq = tmpppq;
+    
+    beatDefinedSequence = targetSequence;
+    beatDefinedSequence.updateMatchedPairs();
+    changeTicksToBeats(beatDefinedSequence);
+    
+    //note we count from zero beats
 }
- 
+
+
+void JuceSequenceLoopPlayer::changeTicksToBeats(MidiMessageSequence& sequence){
+    
+//    std::cout <<"\nCHANGE TICKS TO BEATS" << std::endl;
+//    printSequenceEvents(sequence);
+    
+    //might need to think if there were structural changes - eg to 5/8 or something?
+    for (int i = 0 ; i < sequence.getNumEvents(); i++){
+        double tmpTime = sequence.getEventTime(i);
+  //      std::cout << tmpTime << "-> " << tmpTime/ppq << std::endl;
+        sequence.getEventPointer(i)->message.setTimeStamp(tmpTime/ppq);
+    }
+//    std::cout <<"\nTICKS CHANGEED TO BEATS" << std::endl;
+//    printSequenceEvents(sequence);
+}
  
 void JuceSequenceLoopPlayer::reset(){
    // millisCounter = 0;
@@ -86,6 +111,9 @@ void JuceSequenceLoopPlayer::reset(){
     beatTick = -1;//counter set every time incoming beat happens
     midiPlayIndex = -1;//index in sequence we have played
     lastTick = 0;
+    
+    loopWidth = loopEndBeats - loopStartBeats;
+    lastBeatPosition = 0;
     
 }
 
@@ -111,6 +139,48 @@ void JuceSequenceLoopPlayer::stop(){
 //void newBeat(){
 //    tickPosition = getTicksFromBeat(beatPosition);
 //}
+
+void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
+    //new alternative update based on beats
+    float beatNow = newBeat;
+    while(beatNow > loopEndBeats){
+        
+        beatNow -= loopWidth;
+    }
+    if (beatNow >= lastBeatPosition){
+        //normal
+        updateToBeatPosition(beatNow);
+    }
+    else {
+        //gone round
+        std::cout << "gone round to " << beatNow << "  (actual beat " << newBeat << ") from lastBeatPosition " << lastBeatPosition << std::endl;
+        updateToBeatPosition(loopEndBeats);
+        lastBeatPosition = loopStartBeats;
+        updateToBeatPosition(beatNow);
+    }
+}
+
+void JuceSequenceLoopPlayer::updateToBeatPosition(const float& beatPosition){
+    
+    if (beatPosition > lastBeatPosition){
+        //do update - eg schedule notes
+        lastBeatPosition = beatPosition;
+    } else {
+        std::cout << "NO UPDATE " << beatPosition << " as last posiution " << lastBeatPosition << std::endl;
+        
+    }
+    
+    //it could happen that beat position is ahead - eg predicted from last beat
+    //then we find we are behind
+    //we cannot unschedule any events that have been played
+    //only allow ourselves to catch up
+    //in practice this is only around beats moving in tempo
+    //not too problematic
+    
+    //could kalman filter etc but we expect our prediction to be accurate
+    
+}
+
 
 void JuceSequenceLoopPlayer::updatePlaybackToBeat(int& beatIndex){//, int& millisCount){
    // millisCounter = millisCount;

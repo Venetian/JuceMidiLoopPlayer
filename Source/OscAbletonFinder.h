@@ -18,7 +18,7 @@ public:
     using OSCfinder::OSCfinder;
     
 //    int* beat; 
-    int beat;
+    float beat;
     int systemTime;
     float tempoMillis;
     void init();

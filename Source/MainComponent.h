@@ -58,7 +58,7 @@ public:
 private:
     OSCAbletonFinder finder;
     
-    void newAbletonBeatReceived(int beatIndex, float tempo, unsigned long systemTimeAbleton);
+    void newAbletonBeatReceived(float beatIndex, float tempo, unsigned long systemTimeAbleton);
     //menu for midi devices
     ComboBox midiOutputBox;
     ComboBox midiLooperOutputBox;

@@ -20,6 +20,7 @@ public:
     ~JuceSequenceLoopPlayer();
     
     void setSequence(const MidiMessageSequence&targetSequence, int tmpppq);
+    void changeTicksToBeats(MidiMessageSequence& sequence);
     
     void reset();
     
@@ -58,11 +59,22 @@ public:
     
     MidiMessageSequence transformedSequence;//make private
     
+    MidiMessageSequence beatDefinedSequence;
+    
     Value noteOnValue;
     void revertToOriginal();
     
     void transposeSequence(int notesInScale);
     Value reversedValue;
+    
+    //new update routines
+    void alternativeUpdateToBeat(const float& beatNow);
+    void updateToBeatPosition(const float& beatPosition);
+    
+    double loopEndBeats;
+    double loopStartBeats;
+    double loopWidth;//to save time
+    double lastBeatPosition;
     
 private:
     MidiMessageSequence originalSequence;

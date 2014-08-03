@@ -39,10 +39,12 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
       
         if (msgPattern.equalsIgnoreCase(OSCPrefix)){
             arg = m.ArgumentsBegin();
-            if (arg->IsInt32()){
+            if (arg->IsFloat()){
+                beat = arg->AsFloat();
+                std::cout << "beat is " << beat << std::endl;
+            } else if (arg->IsInt32()){
                 beat = arg->AsInt32();
-                //std::cout << "beat is " << beat << std::endl;
-            } //else
+            }
                 //std::cout << "not int" << std::endl;
             arg++;
             if (arg->IsInt32()){
@@ -52,20 +54,22 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
             arg++;
             if (arg->IsFloat() || arg->IsInt32()){
                 tempoMillis = arg->AsFloatUnchecked();
-                //std::cout << "tempo " <<  tempoMillis << std::endl;
+                std::cout << "tempo " <<  tempoMillis << std::endl;
             }
 
             //ordering is important below
-            if (!halfTime){
+            //if (!halfTime){
                 tempoVal.setValue(tempoMillis);//first so we know tempo
                 sysTimeVal.setValue(systemTime);
                 beatVal.setValue(beat);
-            } else if (beat % 2 == 1){
-                tempoVal.setValue(tempoMillis* 2);
-                sysTimeVal.setValue(systemTime);
-                beatVal.setValue((beat+1)/2) ;
-            }
+            //} else if (beat % 2 == 1){
+              //  tempoVal.setValue(tempoMillis* 2);
+              //  sysTimeVal.setValue(systemTime);
+              //  beatVal.setValue((beat+1)/2) ;
+            // }
             //newBeatReceived - add a listener?
+            
+            std::cout << "beatset " << (float)beatVal.getValue() << std::endl;
         }
     }
     catch (osc::Exception& e)

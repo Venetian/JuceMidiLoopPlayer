@@ -16,7 +16,7 @@
 
 struct AbletonBeat{
 public:
-    int index;//
+    float index;//
     float tempo;//in millis per beat period
     unsigned long systemTime;//as sent by ableton but truncated to int - not brilliant that aspect but should still work okay
     float ticks;//in MIDI ticks - depends on the tempo of course
@@ -31,10 +31,11 @@ public:
     MidiFile midiFile;
     
     MidiMessageSequence loadMidiFile(String fileLocation, bool mergeOn);
+    
     void startMidiPlayback();
     void stopMidiPlayback();
 
-    void newBeat(int beatIndex, float tempoMillis, int latency);
+    void newBeat(float beatIndex, float tempoMillis, int latency);
     
     void reverseSequence(MidiMessageSequence& sequence, int startStamp, int endStamp);
     
@@ -64,13 +65,15 @@ private:
     int millisCounter;
     int lastAltBeatTimeMillis;
     float lastAltBeatTimeTicks;
+    float lastAltBeatIndex;
     float beatPeriod;
     
     int midiPlayIndex;
     void reset();
     
     unsigned long systemTime();
-    void alternativeBeatCall(int& beatIndex, float& tempoMillis, int& latency);
+    void alternativeBeatCall(float& beatIndex, float& tempoMillis, int& latency);
+    float millisToBeats(const float& millis);
     
     void setTempo(float tempoMillis);
     
