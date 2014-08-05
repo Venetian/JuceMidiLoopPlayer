@@ -71,10 +71,12 @@ public:
     void alternativeUpdateToBeat(const float& beatNow);
     void updateToBeatPosition(const float& beatPosition);
     
-    double loopEndBeats;
-    double loopStartBeats;
-    double loopWidth;//to save time
+    float loopEndBeats;
+    float loopStartBeats;
+    float loopWidthBeats;//to save time
     double lastBeatPosition;
+    
+    void setLoopPointsBeats(float startLoop, float endLoop);
     
 private:
     MidiMessageSequence originalSequence;
@@ -92,6 +94,9 @@ private:
     int beatMillisCounter;//millis counter when on beat
     int beatTick;
  
+    float getLoopPosition(const float& beatPosition);
+    float getModulo(float& highValue, float& moduloValue);
+    
     std::vector<int> notesSentOut;
 //    int millisCounter;
     int midiPlayIndex;

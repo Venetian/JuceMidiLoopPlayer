@@ -45,9 +45,12 @@ JuceSequenceLoopPlayer::JuceSequenceLoopPlayer(){
     loopStartTicks = 0;
     loopEndTicks = ppq*16;//4 beat loop of beginning
     
-    loopStartBeats = 0;
-    loopEndBeats = 16;
-    loopWidth = loopEndBeats-loopStartBeats;
+    
+    setLoopPointsBeats(0, 16);
+//    loopStartBeats = 0;
+  //  loopEndBeats = 16;
+   // loopWidthBeats = loopEndBeats-loopStartBeats;
+    
     
     name = "";
     
@@ -90,6 +93,14 @@ void JuceSequenceLoopPlayer::setSequence(const MidiMessageSequence& targetSequen
 }
 
 
+void JuceSequenceLoopPlayer::setLoopPointsBeats(float startLoop, float endLoop){
+    if (endLoop > startLoop && startLoop >= 0){
+        loopStartBeats = startLoop;
+        loopEndBeats = endLoop;
+        loopWidthBeats = endLoop - startLoop;
+    }
+}
+
 void JuceSequenceLoopPlayer::changeTicksToBeats(MidiMessageSequence& sequence){
     
 //    std::cout <<"\nCHANGE TICKS TO BEATS" << std::endl;
@@ -112,7 +123,7 @@ void JuceSequenceLoopPlayer::reset(){
     midiPlayIndex = -1;//index in sequence we have played
     lastTick = 0;
     
-    loopWidth = loopEndBeats - loopStartBeats;
+
     lastBeatPosition = 0;
     
 }
@@ -140,13 +151,44 @@ void JuceSequenceLoopPlayer::stop(){
 //    tickPosition = getTicksFromBeat(beatPosition);
 //}
 
+
+
+float JuceSequenceLoopPlayer::getLoopPosition(const float& beatPosition){
+    if (beatPosition <= loopEndBeats){
+        return beatPosition;
+    } else {
+        float beatTime = beatPosition - loopStartBeats;//amount since we started looping
+        beatTime = getModulo(beatTime, loopWidthBeats);
+        beatTime += loopStartBeats;
+        return beatTime;
+    }
+
+}
+
+float JuceSequenceLoopPlayer::getModulo(float& highValue, float& moduloValue){
+    int roundedDivided = (int)(highValue / moduloValue);
+    float modResult = highValue - moduloValue*roundedDivided;
+    return modResult;
+}
+
+
 void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
     //new alternative update based on beats
+   /*
+    replaciong this with one above as presumably quicker once higher modulo values are calculated
     float beatNow = newBeat;
     while(beatNow > loopEndBeats){
-        
+    
         beatNow -= loopWidth;
     }
+    */
+
+    float beatNow = getLoopPosition(newBeat);
+    //std::cout << "altupdate " << newBeat << ", beatnow " << beatNow << std::endl;
+    
+
+   //std::cout << beatNow << std::endl;
+    
     if (beatNow >= lastBeatPosition){
         //normal
         updateToBeatPosition(beatNow);
@@ -158,6 +200,8 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
         lastBeatPosition = loopStartBeats;
         updateToBeatPosition(beatNow);
     }
+    
+    
 }
 
 void JuceSequenceLoopPlayer::updateToBeatPosition(const float& beatPosition){
@@ -191,9 +235,9 @@ void JuceSequenceLoopPlayer::updatePlaybackToBeat(int& beatIndex){//, int& milli
 
 double JuceSequenceLoopPlayer::getTicksFromBeat(double beatPositionTicks){
     double tmp = beatPositionTicks;
-    double loopWidth = loopEndTicks - loopStartTicks;
+    double loopWidthTicks = loopEndTicks - loopStartTicks;
     while ((int)beatPositionTicks > loopEndTicks){//vital to have =?
-        beatPositionTicks -= loopWidth;
+        beatPositionTicks -= loopWidthTicks;
     }
     
     std::cout << "beat position " << tmp << " == " << beatPositionTicks << " for loop ";

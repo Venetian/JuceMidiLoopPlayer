@@ -22,7 +22,7 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
     try
     {
         String msgPattern = m.AddressPattern();
-        const int numArgs = m.ArgumentCount();
+        //const int numArgs = m.ArgumentCount();
         /*
         if (msgPattern.equalsIgnoreCase(OSCPrefix))
             std::cout << "ableton osc message matches address: ";
@@ -53,7 +53,7 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
             }
             arg++;
             if (arg->IsFloat() || arg->IsInt32()){
-                tempoMillis = arg->AsFloatUnchecked();
+                tempoMillis = 60000.0/arg->AsFloatUnchecked();
                 std::cout << "tempo " <<  tempoMillis << std::endl;
             }
 
@@ -68,6 +68,10 @@ void OSCAbletonFinder::ProcessMessage(const osc::ReceivedMessage& m, const IpEnd
               //  beatVal.setValue((beat+1)/2) ;
             // }
             //newBeatReceived - add a listener?
+            
+            //forgettung the half time stuff for the moment
+            //we change the values of the associated variables
+            //listener on these in main component will do our fn call
             
             std::cout << "beatset " << (float)beatVal.getValue() << std::endl;
         }

@@ -61,6 +61,10 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     looper.invertOriginal();
     looper.printSequenceEvents(looper.transformedSequence);
     
+    //important so we start clock and midi
+    //is there better way for this?
+    lastAltBeatIndex = 0;
+    
 }
 
 JuceMidiFilePlayer::~JuceMidiFilePlayer(){
@@ -88,6 +92,8 @@ void JuceMidiFilePlayer::reset(){
     beatTick = 0;//counter set every time incoming beat happens
     midiPlayIndex = -1;//index in sequence we have played
     
+    //important that at start we reset all clocks
+    //the beat times are stored by these three variables
     lastAltBeatTimeMillis = 0;
     lastAltBeatTimeTicks = 0;
     lastAltBeatIndex = 0;
@@ -100,6 +106,9 @@ void JuceMidiFilePlayer::stopMidiPlayback(){
     std::cout << "stop" << std::endl;
     
     stopTimer();
+    //this is our trigger used to start again
+    lastAltBeatIndex = -1;
+    
     looper.stop();
     prophet.stop();
     
@@ -115,11 +124,24 @@ void JuceMidiFilePlayer::stopMidiPlayback(){
 //we then need to do our own clocking, knowing the Ableton tempo
 //to work out what MIDI notes need scheduling when
 void JuceMidiFilePlayer::newBeat(float beatIndex, float tempoMillis, int latency){
-    if (beatIndex == 0){
+    if (beatIndex == -1){
         stopMidiPlayback();
         return;
     }
+
+    std::cout << "lastaltbeat " << lastAltBeatIndex << ", beat index " << beatIndex << std::endl;
+    if (lastAltBeatIndex == -1){
+
+        startMidiPlayback();
+        setTempo(tempoMillis);
+    } else {
+        std::cout << "lastalt " << lastAltBeatIndex << std::endl;
+    }
     
+    alternativeBeatCall(beatIndex, tempoMillis, latency);//the new zero indexed beats
+    
+    
+    /*
     beatIndex--;//because we count from zero!
     if (beatIndex == 0){
         setTempo(tempoMillis);
@@ -128,10 +150,8 @@ void JuceMidiFilePlayer::newBeat(float beatIndex, float tempoMillis, int latency
     } else {
         updatePlaybackToBeat(beatIndex);
         setTempo(tempoMillis);
-
     }
-    
-    alternativeBeatCall(beatIndex, tempoMillis, latency);//the new zero indexed beats
+    */
 }
 
 
@@ -180,6 +200,8 @@ void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMilli
     std::cout << "beat period " << beatPeriod << std::endl;
     
     newBeat.ticks = millisToTicks(millisCounter-latency);
+    //update our recent beat variables so clock count and prediction from
+    //beats received is accurate
     lastAltBeatIndex = beatIndex;
     lastAltBeatTimeMillis = newBeat.millis;//put after ticks to millis
     lastAltBeatTimeTicks = newBeat.ticks;//again after the other setting and before pushing this beat back
@@ -187,6 +209,9 @@ void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMilli
     beatsReceived.push_back(newBeat);
     
     std::cout << "alt beat " << beatIndex << " tempo " << tempoMillis << " sys time " << timenow << " millis counter " << newBeat.millis << " ticks " << newBeat.ticks << ", beat estimate " << beatEstimate << std::endl;
+    
+    //not calling the looper yet
+//    looper.alternativeUpdateToBeat()
     
 }
 
@@ -205,10 +230,11 @@ float JuceMidiFilePlayer::millisToBeats(const float& millis){
     //get last beat and ticks there
     //float millisElapsed = (millis - lastAltBeatTimeMillis);
     //at current tempo in terms of ticks, this is
-    float beatsElapsed = (millis - lastAltBeatTimeMillis) /beatPeriod;
+  //  float beatsElapsed = (millis - lastAltBeatTimeMillis) /beatPeriod;
+    //return (beatsElapsed + lastAltBeatIndex);
     
-    return (beatsElapsed + lastAltBeatIndex);
-    
+    //i.e.
+    return ((millis - lastAltBeatTimeMillis)/beatPeriod)+lastAltBeatIndex;
 }
 
 
@@ -234,8 +260,16 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
     
     updateMidiPlayPositionToTickPosition(beatTick + ((millisCounter-beatMillisCounter)*playbackSpeed));
  
+    //std::cout << "counter " << millisCounter << std::endl;
     
+    //alternative methd with beats
+    //turn our clock here into a beat time
+    //millis to beats does that using the recent ableton info via osc
+    //starting at zero!
     looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
+    
+   // dont think this one ever would be right function - delete
+    //looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
 }
 
 

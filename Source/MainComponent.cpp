@@ -40,6 +40,11 @@ prophetButton("prophet reverse")//, deviceManager()
     tempoValue.addListener(this);
     tempoValue.referTo(finder.tempoVal);
     
+    //these above not really what we want to start
+    finder.tempoVal = 400;//150bpm default
+    finder.beatVal = -1;//to set it to the STOP position
+    
+    
     prophetNoteValue.setValue(-1);
     prophetNoteValue.addListener(this);
     prophetNoteValue.referTo(midiPlayer.prophet.noteOnValue);
@@ -186,9 +191,14 @@ void MainContentComponent::newAbletonBeatReceived(float beatIndex, float tempo, 
     } else
         std::cout << "letency from Ableton Live is " << latency << std::endl;
     
-    if (beatIndex != lastBeatIndex){
-        lastBeatIndex = beatIndex;
+    if (beatIndex == -1){
+        std::cout << "MCC: STOP" << std::endl;
+        midiPlayer.stopMidiPlayback();
+    } else if (beatIndex != lastBeatIndex){
+        lastBeatIndex = beatIndex;//var used so we don't double call
         midiPlayer.newBeat(beatIndex, tempo, latency);
+    } else {
+        std::cout << "repetitive beat " << beatIndex << " tempo " << tempo << std::endl;
     }
 }
 
