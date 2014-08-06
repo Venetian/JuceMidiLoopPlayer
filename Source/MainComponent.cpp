@@ -14,7 +14,7 @@
 #define OSC_RECEIVER_PORT 12178
 //==============================================================================
 MainContentComponent::MainContentComponent() : finder("abletonSync", OSC_RECEIVER_PORT),
-prophetButton("prophet reverse")//, deviceManager()
+prophetButton("prophet reverse")// deviceManager()
 {
     setSize (500, 400);
 
@@ -28,17 +28,19 @@ prophetButton("prophet reverse")//, deviceManager()
     finder.startThread();
     
     //set up listeners here for new values in our osc class that listens to ableton
-    //beatValue.setValue(-1);
-    beatValue.addListener(this);
+    beatValue.setValue(finder.beatVal.getValue());
     beatValue.referTo(finder.beatVal);
+    beatValue.addListener(this);
+    
     
    // sysTimeValue.setValue(-1);
     sysTimeValue.addListener(this);
     sysTimeValue.referTo(finder.sysTimeVal);
     
-    //tempoValue.setValue(-1);
-    tempoValue.addListener(this);
+    tempoValue.setValue(-1);
     tempoValue.referTo(finder.tempoVal);
+    tempoValue.addListener(this);
+    
     
     //these above not really what we want to start
     finder.tempoVal = 400;//150bpm default
@@ -123,6 +125,12 @@ prophetButton("prophet reverse")//, deviceManager()
     resized();
     
     lastBeatIndex = -1;//to recognise new beat info
+    
+    //add message box for looper
+    addAndMakeVisible (midiPlayer.looper.messageListBox);
+    midiPlayer.looper.messageListBox.setModel (&midiPlayer.looper.midiLogListBoxModel);
+    midiPlayer.looper.messageListBox.setColour (ListBox::backgroundColourId, Colour (0x32ffffff));
+    midiPlayer.looper.messageListBox.setColour (ListBox::outlineColourId, Colours::black);
 
 }
 
@@ -349,6 +357,9 @@ void MainContentComponent::resized()
     midiProphetInputBox.setBoundsRelative(0.05, 0.75, 0.3, 0.05);
     
     prophetButton.setBoundsRelative(0.35, 0.25, 0.25, 0.05);
+    
+    Rectangle<int> area (getLocalBounds());
+    midiPlayer.looper.messageListBox.setBoundsRelative(0.5, 0.5, 0.45, 0.45);
 }
 
 

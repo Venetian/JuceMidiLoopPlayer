@@ -24,6 +24,13 @@ transforms
  */
 
 JuceMidiFilePlayer::JuceMidiFilePlayer(){
+    
+    //set up pointers in looper
+    //not particularly keen on this system but will work fine as long as the midi player setup is called here
+    //it watches out for the timing here - tempo and millis counter - to schedule note off events
+    setUp(looper);
+    
+    
     playbackSpeed = 1.0;
     
     String location;
@@ -67,6 +74,11 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     
    // startTimer(1);
     
+}
+
+void JuceMidiFilePlayer::setUp(JuceSequenceLoopPlayer& player){
+    player.milliscounter = &millisCounter;
+    player.tempoMillis = &beatPeriod;
 }
 
 JuceMidiFilePlayer::~JuceMidiFilePlayer(){
@@ -179,16 +191,16 @@ void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
 
 }
 
-unsigned long JuceMidiFilePlayer::systemTime(){
+unsigned long long JuceMidiFilePlayer::systemTime(){
 	struct timeval now;
 	gettimeofday( &now, NULL );
-	unsigned long timenow = (unsigned long long) now.tv_usec/1000 + (unsigned long long) now.tv_sec*1000;
+	unsigned long long timenow = (unsigned long long) now.tv_usec/1000 + (unsigned long long) now.tv_sec*1000;
     //std::cout << "system time now " << timenow << " truncated " << (int)timenow << std::endl;
     return timenow;
 }
 
 void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMillis, int& latency){
-    unsigned long timenow = systemTime();
+    unsigned long long timenow = systemTime();
     timenow -= latency;
     
     //we can check the time here - if there was latency - eg over network - we would eliminate it
@@ -260,7 +272,7 @@ void JuceMidiFilePlayer::setTempo(float tempoMillis){
 
 
 void JuceMidiFilePlayer::updateMidiPlayPosition(){
-    //main fn called by clock
+    //main fn called by clock every 1 msec
     
     //called every millis by the clock
     millisCounter++;
@@ -277,23 +289,25 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
     
     looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
     
-   // dont think this one ever would be right function - delete
-    //looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
 }
 
 
-void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(double position){
-    //THIS CLASS
-    //updateMidiPlayPositionToTickPosition(loopSequence, position);
-    
-    //time in ticks since beattick is position - beattick
- //for looper
-    position -= beatTick;
-    looper.updateTicksSinceLastBeat(position);//i.e. position-beatTick , time since beat happened
-    prophet.updateTicksSinceLastBeat(position);
-}
+
 
 /*
+ 
+ void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(double position){
+ //THIS CLASS
+ //updateMidiPlayPositionToTickPosition(loopSequence, position);
+ 
+ //time in ticks since beattick is position - beattick
+ //for looper
+ position -= beatTick;
+ 
+ //defunnkt
+ looper.updateTicksSinceLastBeat(position);//i.e. position-beatTick , time since beat happened
+ prophet.updateTicksSinceLastBeat(position);
+ }
 void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(MidiMessageSequence& sequence, float tickPosition){
     
      //this not needed - we already have index from the last time

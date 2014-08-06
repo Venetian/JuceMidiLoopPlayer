@@ -42,6 +42,7 @@ public:
     JuceSequenceLoopPlayer looper;
     
     JuceSequenceLoopPlayer prophet;
+    void setUp(JuceSequenceLoopPlayer& player);
     
     ScopedPointer<MidiOutput> midiDevice;
     
@@ -71,7 +72,7 @@ private:
     int midiPlayIndex;
     void reset();
     
-    unsigned long systemTime();
+    unsigned long long systemTime();
     void alternativeBeatCall(float& beatIndex, float& tempoMillis, int& latency);
     float millisToBeats(const float& millis);
     
