@@ -63,7 +63,9 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     
     //important so we start clock and midi
     //is there better way for this?
-    lastAltBeatIndex = 0;
+    lastAltBeatIndex = -1;
+    
+   // startTimer(1);
     
 }
 
@@ -83,7 +85,8 @@ void JuceMidiFilePlayer::startMidiPlayback(){
    
     reset();
     startTimer(1);
-    std::cout << "midi play start" << std::endl;
+
+    std::cout << "JMFP: midi play start" << std::endl;
 }
 
 void JuceMidiFilePlayer::reset(){
@@ -103,15 +106,20 @@ void JuceMidiFilePlayer::reset(){
 }
 
 void JuceMidiFilePlayer::stopMidiPlayback(){
-    std::cout << "stop" << std::endl;
+    std::cout << "JMFP: stop" << std::endl;
     
+    //for some odd reason - if we call this
+    //we never get past it
     stopTimer();
+    
+    
     //this is our trigger used to start again
     lastAltBeatIndex = -1;
     
     looper.stop();
     prophet.stop();
     
+    std::cout << "JMFP: beats received " << beatsReceived.size() << std::endl;
     for (int i = 0; i < beatsReceived.size(); i++){
         std::cout << beatsReceived[i].index << " tempo " << beatsReceived[i].tempo << ", systime " << beatsReceived[i].systemTime << std::endl;
     }
@@ -125,21 +133,24 @@ void JuceMidiFilePlayer::stopMidiPlayback(){
 //to work out what MIDI notes need scheduling when
 void JuceMidiFilePlayer::newBeat(float beatIndex, float tempoMillis, int latency){
     if (beatIndex == -1){
-        stopMidiPlayback();
+        std::cout << "JMFP: stop called" << std::endl;
+        stopMidiPlayback();//also sets lastAltBeatIndex to -1, ready below to trigger start again
         return;
-    }
-
-    std::cout << "lastaltbeat " << lastAltBeatIndex << ", beat index " << beatIndex << std::endl;
-    if (lastAltBeatIndex == -1){
-
-        startMidiPlayback();
-        setTempo(tempoMillis);
     } else {
-        std::cout << "lastalt " << lastAltBeatIndex << std::endl;
+
+        std::cout << "JMFP: lastaltbeat " << lastAltBeatIndex << ", new beat index " << beatIndex << std::endl;
+        if (lastAltBeatIndex == -1){
+            std::cout << "JMFP: start midi playback" << std::endl;
+            startMidiPlayback();
+            setTempo(tempoMillis);
+        } else {
+            std::cout << "JMFP: lastalt " << lastAltBeatIndex << std::endl;
+        }
+        
+        
+        alternativeBeatCall(beatIndex, tempoMillis, latency);//the new zero indexed beats
+    
     }
-    
-    alternativeBeatCall(beatIndex, tempoMillis, latency);//the new zero indexed beats
-    
     
     /*
     beatIndex--;//because we count from zero!
@@ -157,17 +168,13 @@ void JuceMidiFilePlayer::newBeat(float beatIndex, float tempoMillis, int latency
 
 
 void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
-    //THIS CLASS
-    //updateMidiPlayPositionToTickPosition(beatIndex*ppq);
-    
    
-   // looper.getTicksFromBeat(beatIndex*ppq);defunkt
-    looper.updatePlaybackToBeat(beatIndex);//, millisCounter);
+  //  looper.updatePlaybackToBeat(beatIndex);//, millisCounter);
     
-    prophet.updatePlaybackToBeat(beatIndex);
+  //  prophet.updatePlaybackToBeat(beatIndex);
     
-    beatMillisCounter = millisCounter;
-    beatTick = beatIndex*ppq;
+//    beatMillisCounter = millisCounter;
+  //  beatTick = beatIndex*ppq;
     
 
 }
@@ -187,7 +194,7 @@ void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMilli
     //we can check the time here - if there was latency - eg over network - we would eliminate it
     //by scheduling accordingly
     //for osc between programs on the same computer, zero latency
-    
+    std::cout << "JMFP: alt beat call millis counter " << millisCounter << std::endl;
     float beatEstimate = millisToBeats(millisCounter);
     
     AbletonBeat newBeat;
@@ -211,7 +218,7 @@ void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMilli
     std::cout << "alt beat " << beatIndex << " tempo " << tempoMillis << " sys time " << timenow << " millis counter " << newBeat.millis << " ticks " << newBeat.ticks << ", beat estimate " << beatEstimate << std::endl;
     
     //not calling the looper yet
-//    looper.alternativeUpdateToBeat()
+    looper.alternativeUpdateToBeat(beatIndex);
     
 }
 
@@ -258,7 +265,8 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
     //called every millis by the clock
     millisCounter++;
     
-    updateMidiPlayPositionToTickPosition(beatTick + ((millisCounter-beatMillisCounter)*playbackSpeed));
+    //below was the routine called to send out ticks
+    //updateMidiPlayPositionToTickPosition(beatTick + ((millisCounter-beatMillisCounter)*playbackSpeed));
  
     //std::cout << "counter " << millisCounter << std::endl;
     
@@ -266,6 +274,7 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
     //turn our clock here into a beat time
     //millis to beats does that using the recent ableton info via osc
     //starting at zero!
+    
     looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
     
    // dont think this one ever would be right function - delete
@@ -648,11 +657,13 @@ void JuceMidiFilePlayer::reverseSequence(MidiMessageSequence& sequence, int star
     std::cout << "LOOPER" << std::endl;
     looper.reverseOriginal();
     
-    looper.printSequenceEvents(looper.transformedSequence);
+    //looper.printSequenceEvents(looper.transformedSequence);
+    std::cout << "LOOPER BEAT DEFINED SEQUENCE" << std::endl;
+    looper.printSequenceEvents(looper.beatDefinedSequence);
     
     prophet.setSequence(sequence, ppq);
     std::cout << "PROPHET" << std::endl;
-//prophet.printSequenceEvents(prophet.transformedSequence);
+    //prophet.printSequenceEvents(prophet.transformedSequence);
     
 }
 

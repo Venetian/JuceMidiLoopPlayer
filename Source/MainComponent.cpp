@@ -28,15 +28,15 @@ prophetButton("prophet reverse")//, deviceManager()
     finder.startThread();
     
     //set up listeners here for new values in our osc class that listens to ableton
-    beatValue.setValue(-1);
+    //beatValue.setValue(-1);
     beatValue.addListener(this);
     beatValue.referTo(finder.beatVal);
     
-    sysTimeValue.setValue(-1);
+   // sysTimeValue.setValue(-1);
     sysTimeValue.addListener(this);
     sysTimeValue.referTo(finder.sysTimeVal);
     
-    tempoValue.setValue(-1);
+    //tempoValue.setValue(-1);
     tempoValue.addListener(this);
     tempoValue.referTo(finder.tempoVal);
     
@@ -147,10 +147,12 @@ MainContentComponent::~MainContentComponent()
 
 void MainContentComponent::valueChanged(Value& value){
 
-   // std::cout << "value changed " << std::endl;//(int)value.getValue() << std::endl;
+   std::cout << "value changed " << (float)value.getValue() << std::endl;//(int) << std::endl;
 
     if (value == beatValue){
-        beatInfo.setText("beat "+value.toString()+"  "+String(midiPlayer.looper.lastTick), dontSendNotification);//(int)value.getValue());
+        std::cout << "MCC: valchange: beat " << (float)value.getValue() << " tempo " << (float)tempoValue.getValue() << std::endl;
+        
+        beatInfo.setText("beat "+value.toString(), dontSendNotification);//(int)value.getValue());
         
         //have ordered this so that we update tempo, systemtime and then Ableton beat index
 
@@ -158,8 +160,10 @@ void MainContentComponent::valueChanged(Value& value){
         
     } else if (value == sysTimeValue){
         systemTimeInfo.setText("sysTime "+value.toString(), dontSendNotification);
+        std::cout << "sys time changed"<< std::endl;
     } else if (value == tempoValue){
         tempoInfo.setText("tempo "+value.toString(), dontSendNotification);
+        std::cout << " tempo changed " << value.toString() << std::endl;
     } else if (value == prophetNoteValue){
         prophetLabel.setText(value.toString(), dontSendNotification);
     } else if (value == prophetReversedValue){
@@ -183,20 +187,24 @@ unsigned long systemTime(){
 
 void MainContentComponent::newAbletonBeatReceived(float beatIndex, float tempo, unsigned long systemTimeAbleton){
     std::cout << "MCC: beat " << beatIndex << " tempo " << tempo << std::endl;
+    
+    //some latency calculations, in case our osc message is over a network etc
     unsigned long systemTimeHere = systemTime();
     int latency = systemTimeHere - systemTimeAbleton;
     if (abs(latency) > 50){
-        std::cout << "weird latency error " << latency << "so setting to zero " << std::endl;
+        std::cout << "weird latency error " << latency << " with system time " << systemTimeHere << " so setting to zero " << std::endl;
         latency = 0;
     } else
         std::cout << "letency from Ableton Live is " << latency << std::endl;
     
-    if (beatIndex == -1){
-        std::cout << "MCC: STOP" << std::endl;
-        midiPlayer.stopMidiPlayback();
-    } else if (beatIndex != lastBeatIndex){
-        lastBeatIndex = beatIndex;//var used so we don't double call
+  
+    if (beatIndex != lastBeatIndex) {
+        //var used so we don't double call
+        
+        std::cout << "mcc new beat " << beatIndex << ", tempo " << tempo << std::endl;
+        lastBeatIndex = beatIndex;
         midiPlayer.newBeat(beatIndex, tempo, latency);
+
     } else {
         std::cout << "repetitive beat " << beatIndex << " tempo " << tempo << std::endl;
     }

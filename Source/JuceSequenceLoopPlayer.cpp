@@ -89,6 +89,9 @@ void JuceSequenceLoopPlayer::setSequence(const MidiMessageSequence& targetSequen
     beatDefinedSequence.updateMatchedPairs();
     changeTicksToBeats(beatDefinedSequence);
     
+    printSequenceEvents(beatDefinedSequence);
+    std::cout << "END BEAT DEFINED" << std::endl;
+    
     //note we count from zero beats
 }
 
@@ -103,7 +106,7 @@ void JuceSequenceLoopPlayer::setLoopPointsBeats(float startLoop, float endLoop){
 
 void JuceSequenceLoopPlayer::changeTicksToBeats(MidiMessageSequence& sequence){
     
-//    std::cout <<"\nCHANGE TICKS TO BEATS" << std::endl;
+    std::cout <<"\nCHANGE TICKS TO BEATS" << std::endl;
 //    printSequenceEvents(sequence);
     
     //might need to think if there were structural changes - eg to 5/8 or something?
@@ -123,6 +126,7 @@ void JuceSequenceLoopPlayer::reset(){
     midiPlayIndex = -1;//index in sequence we have played
     lastTick = 0;
     
+    outputCheckIndex = 0;//for checking which events should be output
 
     lastBeatPosition = 0;
     
@@ -184,11 +188,14 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
     */
 
     float beatNow = getLoopPosition(newBeat);
-    //std::cout << "altupdate " << newBeat << ", beatnow " << beatNow << std::endl;
     
-
+   // std::cout << name << "altupdate " << newBeat << ", beatnow " << beatNow << std::endl;
+    //float zero = 0;
+    checkOutput(lastBeatPosition, newBeat);
+    lastBeatPosition = newBeat;
+    
    //std::cout << beatNow << std::endl;
-    
+    /*
     if (beatNow >= lastBeatPosition){
         //normal
         updateToBeatPosition(beatNow);
@@ -196,11 +203,17 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
     else {
         //gone round
         std::cout << "gone round to " << beatNow << "  (actual beat " << newBeat << ") from lastBeatPosition " << lastBeatPosition << std::endl;
-        updateToBeatPosition(loopEndBeats);
-        lastBeatPosition = loopStartBeats;
-        updateToBeatPosition(beatNow);
+        //watch this one - can have things like
+        //4.52
+        //4.49
+        
+     
+        //updateToBeatPosition(loopEndBeats);
+        //lastBeatPosition = loopStartBeats;
+        //updateToBeatPosition(beatNow);
+     
     }
-    
+    */
     
 }
 
@@ -208,6 +221,9 @@ void JuceSequenceLoopPlayer::updateToBeatPosition(const float& beatPosition){
     
     if (beatPosition > lastBeatPosition){
         //do update - eg schedule notes
+        
+       // std::cout << "check " << beatPosition << std::endl;
+        checkOutput(lastBeatPosition, beatPosition);
         lastBeatPosition = beatPosition;
     } else {
         std::cout << "NO UPDATE " << beatPosition << " as last posiution " << lastBeatPosition << std::endl;
@@ -225,6 +241,36 @@ void JuceSequenceLoopPlayer::updateToBeatPosition(const float& beatPosition){
     
 }
 
+
+void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatTime){
+    //std::cout << name << "checkOutput: index " << outputCheckIndex << " check from " << lastBeatTime << " to " << beatTime << std::endl;
+    
+//    while (outputCheckIndex > 0 && beatDefinedSequence.getEventTime(outputCheckIndex) > lastBeatTime){
+//        outputCheckIndex--;
+//    }
+    
+    while (outputCheckIndex < beatDefinedSequence.getNumEvents() && beatDefinedSequence.getEventTime(outputCheckIndex) < lastBeatTime){
+        outputCheckIndex++;
+    }
+    //std::cout << name << ": outcheck index " << outputCheckIndex << std::endl;
+    
+    while (outputCheckIndex < beatDefinedSequence.getNumEvents() && beatDefinedSequence.getEventTime(outputCheckIndex) < beatTime){
+        float tmpTime = beatDefinedSequence.getEventTime(outputCheckIndex);
+        if (tmpTime > lastBeatTime && tmpTime <= beatTime){
+            //output event
+
+            if (beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOn()){
+                std::cout << name << ": NOTE_ON (" << outputCheckIndex << ")" << tmpTime << std::endl;
+                int offIndex = beatDefinedSequence.getIndexOfMatchingKeyUp(outputCheckIndex);
+                std::cout << "Off index " << offIndex << std::endl;
+            } else if (beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOff())
+                std::cout << name << ": NOTE_OFF (" << outputCheckIndex << ")" << tmpTime << std::endl;
+            sendMessageOut(beatDefinedSequence.getEventPointer(outputCheckIndex)->message);
+        }
+        outputCheckIndex++;
+    }
+    
+}
 
 void JuceSequenceLoopPlayer::updatePlaybackToBeat(int& beatIndex){//, int& millisCount){
    // millisCounter = millisCount;
@@ -274,9 +320,10 @@ void JuceSequenceLoopPlayer::updateTicksSinceLastBeat(double ticksSinceBeatTick)
 }
 
 void JuceSequenceLoopPlayer::sendMessageOut(MidiMessage& m){
-    if (m.isNoteOn())
+    if (midiOutDevice != nullptr){// && m.isNoteOn())
         noteOnValue = m.getNoteNumber();
-    midiOutDevice->sendMessageNow(m);
+        midiOutDevice->sendMessageNow(m);
+     }
 }
 
 

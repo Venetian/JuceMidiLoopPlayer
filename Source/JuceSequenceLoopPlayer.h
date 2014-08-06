@@ -74,7 +74,7 @@ public:
     float loopEndBeats;
     float loopStartBeats;
     float loopWidthBeats;//to save time
-    double lastBeatPosition;
+    float lastBeatPosition;
     
     void setLoopPointsBeats(float startLoop, float endLoop);
     
@@ -103,6 +103,8 @@ private:
     
     int loopStartTicks;//in beats Ticks;
     int loopEndTicks;//in beats Ticks;
+    int outputCheckIndex;
+    void checkOutput(float& lastBeatTime, const float& beatTime);
     
     double getTicksFromBeat(double beatPositionTicks);//returns ticks within limits
     
@@ -113,7 +115,10 @@ private:
     
     MidiMessageSequence trackSequence;//pointer to track we load in
     MidiMessageSequence::MidiEventHolder* playEvent;//pointer to an individual midi event
+  
     
+    MidiMessageSequence scheduledEvents;
+//    MidiBuffer midiBuffer;
 
     
     
