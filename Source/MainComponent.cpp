@@ -28,6 +28,7 @@ prophetButton("prophet reverse")// deviceManager()
     finder.startThread();
     
     //set up listeners here for new values in our osc class that listens to ableton
+    finder.beatVal.setValue(-1);
     beatValue.setValue(finder.beatVal.getValue());
     beatValue.referTo(finder.beatVal);
     beatValue.addListener(this);
@@ -268,11 +269,11 @@ void MainContentComponent::comboBoxChanged(ComboBox* box)//override
 void MainContentComponent::handleIncomingMidiMessage (MidiInput* source, const MidiMessage& message) {
     std::cout << "midi in '" << source->getName() << "' " << message.getRawDataSize() << " bytes" << std::endl;
     //std::cout << source.getDevice
-    
+    float tmpTimeNow = midiPlayer.beatsNow();
     if (source->getName() == moogInputName)
-        midiPlayer.looper.newMidiMessage(message);
+        midiPlayer.looper.newMidiMessage(message, tmpTimeNow);
     else if (source->getName() == prophetInputName)
-        midiPlayer.prophet.newMidiMessage(message);
+        midiPlayer.prophet.newMidiMessage(message, tmpTimeNow);
 
 }
 

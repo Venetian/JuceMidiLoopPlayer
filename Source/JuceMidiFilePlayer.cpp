@@ -64,14 +64,15 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     looper.printSequenceEvents(looper.transformedSequence);
     std::cout << "LOADED" << std::endl;
     
-//    looper.reverseOriginal();
-    looper.invertOriginal();
-    looper.printSequenceEvents(looper.transformedSequence);
+    looper.reverseOriginal();
+    //looper.invertOriginal();
+    looper.printSequenceEvents(looper.beatDefinedSequence);
     
     //important so we start clock and midi
     //is there better way for this?
     lastAltBeatIndex = -1;
-    
+    beatPeriod = 500;
+    lastAltBeatTimeMillis = 0;
    // startTimer(1);
     
 }
@@ -256,7 +257,9 @@ float JuceMidiFilePlayer::millisToBeats(const float& millis){
     return ((millis - lastAltBeatTimeMillis)/beatPeriod)+lastAltBeatIndex;
 }
 
-
+float JuceMidiFilePlayer::beatsNow(){
+    return millisToBeats(millisCounter);
+}
 
 
 
@@ -670,13 +673,12 @@ void JuceMidiFilePlayer::reverseSequence(MidiMessageSequence& sequence, int star
     looper.setSequence(emptyLoop, ppq);
     std::cout << "LOOPER" << std::endl;
     looper.reverseOriginal();
-    
-    //looper.printSequenceEvents(looper.transformedSequence);
     std::cout << "LOOPER BEAT DEFINED SEQUENCE" << std::endl;
     looper.printSequenceEvents(looper.beatDefinedSequence);
     
     prophet.setSequence(sequence, ppq);
     std::cout << "PROPHET" << std::endl;
+    //prophet.reverseOriginal();
     //prophet.printSequenceEvents(prophet.transformedSequence);
     
 }

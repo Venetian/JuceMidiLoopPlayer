@@ -94,7 +94,7 @@ public:
     void startMidiPlayback();
     void stopMidiPlayback();
     
-    void reverseSequence(MidiMessageSequence& sequence, int startStamp, int endStamp);
+   // void reverseSequence(MidiMessageSequence& sequence, float startStamp, float endStamp);
     
     void printSequenceEvents(const MidiMessageSequence& sequence);
 
@@ -103,7 +103,7 @@ public:
     MidiOutput* midiOutDevice;
     MidiInput* midiInputDevice;
     
-    void newMidiMessage(const MidiMessage& message);
+    void newMidiMessage(const MidiMessage& message, float& beatTime);
     
     void updateTicksSinceLastBeat(double ticksSinceBeatTick);
     
@@ -112,14 +112,14 @@ public:
     String name;
     void stop();
     
-    void reverseSequence(MidiMessageSequence& transformedSequence, const MidiMessageSequence& sequence, int startStamp, int endStamp);
+    void reverseSequence(MidiMessageSequence& transformedSequence, const MidiMessageSequence& sequence, float startStamp, float endStamp);
     
     void invertSequence(MidiMessageSequence& invertedSequence, const MidiMessageSequence& sequence, int startStamp, int endStamp);
     
     void setSequence(const MidiMessageSequence& sequence);
     
 
-
+    float lastMidiMessageInTime();
     //transforms
     void reverseOriginal();
     void invertOriginal();
@@ -200,9 +200,11 @@ private:
 //    MidiBuffer midiBuffer;
 
     int beatsToMillis(float& beats);
+   // float millisToBeats(float& millis);
+    
     void addNoteOff(MidiMessage& message, int millisTime);
     void checkNoteOffs();
-    
+    bool checkLock;
     void handleAsyncUpdate()
     {
         messageListBox.updateContent();

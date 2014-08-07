@@ -58,7 +58,7 @@ JuceSequenceLoopPlayer::JuceSequenceLoopPlayer() : midiLogListBoxModel (midiMess
   //  loopEndBeats = 16;
    // loopWidthBeats = loopEndBeats-loopStartBeats;
     
-    
+    checkLock = false;//open to calling
     name = "";
     
     midiPlayIndex = -1;
@@ -98,6 +98,8 @@ void JuceSequenceLoopPlayer::setSequence(const MidiMessageSequence& targetSequen
     
     beatDefinedSequence = targetSequence;
     beatDefinedSequence.updateMatchedPairs();
+    
+    changeTicksToBeats(originalSequence);
     changeTicksToBeats(beatDefinedSequence);
     
     printSequenceEvents(beatDefinedSequence);
@@ -146,8 +148,19 @@ void JuceSequenceLoopPlayer::reset(){
 void JuceSequenceLoopPlayer::stop(){
     
     std::cout << name << "STOP" << std::endl;
+    
+    
+    while (scheduledEvents.getNumEvents() > 0){
+        int index = 0;
+        sendMessageOut(scheduledEvents.getEventPointer(index)->message);
+        std::cout << name << "stop: sending note off " << scheduledEvents.getEventPointer(index)->message.getNoteNumber() << " at " << scheduledEvents.getEventPointer(index)->message.getTimeStamp() << std::endl;
+        scheduledEvents.deleteEvent(index, false);
+    }
+    
     reset();
     
+    
+    /*
     for (int i = 0; i < 100; i++){//notesSentOut.size(); i++){
         MidiMessage m(128, i, 0);//notesSentOut[i], 0);
          MidiMessage m2(129, i, 0);//notesSentOut[i], 0);
@@ -158,6 +171,7 @@ void JuceSequenceLoopPlayer::stop(){
         }
     }
     notesSentOut.clear();
+     */
     
    // printSequenceEvents(transformedSequence);
 }
@@ -204,14 +218,15 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
         //then we went backwards
         //normal
          std::cout << "gone round to " << beatNow << "  (actual beat " << newBeat << ") from lastBeatPosition " <<lastBeatPosition << std::endl;
+        if (!checkLock){
+            checkOutput(lastBeatPosition, loopEndBeats);
+            outputCheckIndex = 0;//so we check from beginning again
+            checkOutput(loopStartBeats, beatNow);
         
-        checkOutput(lastBeatPosition, loopEndBeats);
-        outputCheckIndex = 0;//so we check from beginning again
-        checkOutput(loopStartBeats, beatNow);
-        
-        lastBeatPosition = beatNow;
+            lastBeatPosition = beatNow;
+        }
     }
-    else if (beatNow > lastBeatPosition){
+    else if (beatNow > lastBeatPosition && ! checkLock){
     
         checkOutput(lastBeatPosition, beatNow);
         lastBeatPosition = beatNow;
@@ -225,10 +240,12 @@ void JuceSequenceLoopPlayer::checkNoteOffs(){
     int index = 0;
     while (index < scheduledEvents.getNumEvents() && scheduledEvents.getEventTime(index) < *milliscounter){
         sendMessageOut(scheduledEvents.getEventPointer(index)->message);
-        std::cout << name << " sending note out " << scheduledEvents.getEventPointer(index)->message.getNoteNumber() << " at " << scheduledEvents.getEventPointer(index)->message.getTimeStamp() << std::endl;
+        std::cout << name << " sending note off " << scheduledEvents.getEventPointer(index)->message.getNoteNumber() << " at " << scheduledEvents.getEventPointer(index)->message.getTimeStamp() << std::endl;
         scheduledEvents.deleteEvent(index, false);
     }
 }
+
+
 
 void JuceSequenceLoopPlayer::updateToBeatPosition(const float& beatPosition){
     
@@ -262,10 +279,13 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
 //        outputCheckIndex--;
 //    }
     
+    checkLock = true;
+    
     while (outputCheckIndex < beatDefinedSequence.getNumEvents() && beatDefinedSequence.getEventTime(outputCheckIndex) < lastBeatTime){
+        std::cout << name << ": outcheck index skipping " << outputCheckIndex << " event time " << beatDefinedSequence.getEventTime(outputCheckIndex) << " time " << lastBeatTime << " to " << beatTime << std::endl;
         outputCheckIndex++;
     }
-    //std::cout << name << ": outcheck index " << outputCheckIndex << std::endl;
+ 
     
     while (outputCheckIndex < beatDefinedSequence.getNumEvents() && beatDefinedSequence.getEventTime(outputCheckIndex) <=beatTime && beatDefinedSequence.getEventTime(outputCheckIndex) < loopEndBeats){//last condition to avoid repetition on loop boundary
         float tmpTime = beatDefinedSequence.getEventTime(outputCheckIndex);
@@ -285,7 +305,12 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
                 int channel = beatDefinedSequence.getEventPointer(outputCheckIndex)->message.getChannel();
                 
                 //add the scheduled note off and send out note on out
-                addNoteOff(beatDefinedSequence.getEventPointer(offIndex)->message, millisScheduled);
+                if (offIndex >= 0 && offIndex < beatDefinedSequence.getNumEvents()){
+                    MidiMessage m = beatDefinedSequence.getEventPointer(offIndex)->message;
+                    addNoteOff(m, millisScheduled);
+                } else {
+                    std::cout << name << " STRANGE, POINTER DOESNT EXIST FOR index " << offIndex << " events " << beatDefinedSequence.getNumEvents() << std::endl;
+                }
             
                 sendMessageOut(beatDefinedSequence.getEventPointer(outputCheckIndex)->message);
                 
@@ -298,11 +323,16 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
         outputCheckIndex++;
     }
     
+    checkLock = false;
 }
 
 int JuceSequenceLoopPlayer::beatsToMillis(float& beats){
     return round(beats * (*tempoMillis));
 }
+
+
+//int JuceSequenceLoopPlayer::millisToBeats(float& millis){
+//}
 
 
 void JuceSequenceLoopPlayer::addNoteOff(MidiMessage& message, int millisTime){
@@ -323,15 +353,28 @@ void JuceSequenceLoopPlayer::sendMessageOut(MidiMessage& m){
 }
 
 
-
-void JuceSequenceLoopPlayer::newMidiMessage(const MidiMessage& message){
+#pragma mark MidiMessageIn
+void JuceSequenceLoopPlayer::newMidiMessage(const MidiMessage& message, float& beatTime){
     const uint8* data = message.getRawData();
     std::cout << name << " received " << (int)data[0] << ", " << (int)data[1] << ", " << (int)data[2] << std::endl;
+    MidiMessage copyMessage = message;
     
-    midiMessageList.add (message);
+    copyMessage.setTimeStamp(beatTime);
+    
+    midiMessageList.add (copyMessage);
+    
     triggerAsyncUpdate();
+    
+    float tmp = lastMidiMessageInTime();
+    std::cout << "last time " << tmp << std::endl;
 }
 
+float JuceSequenceLoopPlayer::lastMidiMessageInTime(){
+    if (midiMessageList.size() > 0){
+        return midiMessageList[midiMessageList.size()-1].getTimeStamp();
+    } else
+        return -1;
+}
 
 
 
@@ -477,10 +520,19 @@ void JuceSequenceLoopPlayer::revertToOriginal(){
 
 void JuceSequenceLoopPlayer::reverseOriginal(){
     reversedValue = 1;
-    reverseSequence(transformedSequence, originalSequence, loopStartTicks, loopEndTicks);
+//    reverseSequence(transformedSequence, originalSequence, loopStartTicks, loopEndTicks);
+  
+    std::cout << name << " before reverse " << std::endl;
+    printSequenceEvents(beatDefinedSequence);
+
+    reverseSequence(beatDefinedSequence, originalSequence, loopStartBeats, loopEndBeats);
+
+    std::cout << name << " after reverse " << std::endl;
+    printSequenceEvents(beatDefinedSequence);
+
 }
 
-void JuceSequenceLoopPlayer::reverseSequence(MidiMessageSequence& reversedSequence, const MidiMessageSequence& sequence, int startStamp, int endStamp){
+void JuceSequenceLoopPlayer::reverseSequence(MidiMessageSequence& reversedSequence, const MidiMessageSequence& sequence, float startStamp, float endStamp){
     
     std::cout << name << "REVERSE " << startStamp << " to " << endStamp << std::endl;
     
@@ -492,7 +544,7 @@ void JuceSequenceLoopPlayer::reverseSequence(MidiMessageSequence& reversedSequen
     MidiMessageSequence::MidiEventHolder* eventOffHolder;
     
     for (int i = 0; i < sequence.getNumEvents() && sequence.getEventTime(i) <= endStamp; i++){
-        int tmpTime = sequence.getEventTime(i);
+        float tmpTime = sequence.getEventTime(i);
         
         if (tmpTime >= startStamp && sequence.getIndexOfMatchingKeyUp(i) != -1){//i.e. there is a note off
             eventHolder = sequence.getEventPointer(i);
@@ -501,8 +553,8 @@ void JuceSequenceLoopPlayer::reverseSequence(MidiMessageSequence& reversedSequen
             if (eventHolder->message.isNoteOn()){
                 
                 //add in if between start and end
-                int offTime = sequence.getEventTime(sequence.getIndexOfMatchingKeyUp(i));
-                int duration = offTime-tmpTime;
+                float offTime = sequence.getEventTime(sequence.getIndexOfMatchingKeyUp(i));
+                float duration = offTime-tmpTime;
                 std::cout << "event index " << i << ", " << "time " << tmpTime;
                 std::cout << " has  off index " << sequence.getIndexOfMatchingKeyUp(i) << " time " << offTime << std::endl;
                 std::cout << " note on maps to " << endStamp - tmpTime << ", note off to " << endStamp - tmpTime + duration << std::endl;
@@ -532,6 +584,7 @@ void JuceSequenceLoopPlayer::reverseSequence(MidiMessageSequence& reversedSequen
     //so you could reverse a sequence and return it to itself
     //overwriting the original after the transformation
     reversedSequence = emptyLoop;
+    reversedSequence.updateMatchedPairs();
     
 }
 
@@ -581,7 +634,7 @@ void JuceSequenceLoopPlayer::invertSequence(MidiMessageSequence& invertedSequenc
     MidiMessageSequence::MidiEventHolder* eventOffHolder;
     
     for (int i = 0; i < sequence.getNumEvents() && sequence.getEventTime(i) <= endStamp; i++){
-        int tmpTime = sequence.getEventTime(i);
+        float tmpTime = sequence.getEventTime(i);
         
         if (tmpTime >= startStamp && sequence.getIndexOfMatchingKeyUp(i) != -1){//i.e. there is a note off
             eventHolder = sequence.getEventPointer(i);
@@ -590,7 +643,7 @@ void JuceSequenceLoopPlayer::invertSequence(MidiMessageSequence& invertedSequenc
             if (eventHolder->message.isNoteOn()){
                 
                 //add in if between start and end
-                int offTime = sequence.getEventTime(sequence.getIndexOfMatchingKeyUp(i));
+                float offTime = sequence.getEventTime(sequence.getIndexOfMatchingKeyUp(i));
                 int pitch = eventHolder->message.getNoteNumber();
                 std::cout << "pitch " << pitch << std::endl;
                 int newPitch = invertPitch(pitch);

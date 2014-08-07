@@ -47,7 +47,7 @@ public:
     ScopedPointer<MidiOutput> midiDevice;
     
     std::vector<AbletonBeat> beatsReceived;
-    
+    float beatsNow();
 private:
     
     float playbackSpeed;
