@@ -29,6 +29,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     //not particularly keen on this system but will work fine as long as the midi player setup is called here
     //it watches out for the timing here - tempo and millis counter - to schedule note off events
     setUp(looper);
+    setUp(prophet);
     
     
     playbackSpeed = 1.0;
@@ -51,6 +52,9 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
         case 4:
             location = "../../../../exampleMidiFiles/KingKongBassline.mid";
             break;
+        case 5:
+            location = "../../../../exampleMidiFiles/TaurusBasslineHalftime.mid";
+            break;
     }
     prophet.name = "PROPHET";
     looper.name = "MOOG";
@@ -61,10 +65,11 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     prophet.setSequence(loadedSequence, ppq);
     
     looper.setSequence(loadedSequence, ppq);
+    
     looper.printSequenceEvents(looper.transformedSequence);
     std::cout << "LOADED" << std::endl;
     
-    looper.reverseOriginal();
+    //looper.reverseOriginal();
     //looper.invertOriginal();
     looper.printSequenceEvents(looper.beatDefinedSequence);
     
@@ -73,6 +78,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     lastAltBeatIndex = -1;
     beatPeriod = 500;
     lastAltBeatTimeMillis = 0;
+    
    // startTimer(1);
     
 }
@@ -80,6 +86,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
 void JuceMidiFilePlayer::setUp(JuceSequenceLoopPlayer& player){
     player.milliscounter = &millisCounter;
     player.tempoMillis = &beatPeriod;
+    player.setupCorrect = true;
 }
 
 JuceMidiFilePlayer::~JuceMidiFilePlayer(){
@@ -233,6 +240,8 @@ void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMilli
     //not calling the looper yet
     looper.alternativeUpdateToBeat(beatIndex);
     
+    prophet.alternativeUpdateToBeat(beatIndex);
+    
 }
 
 float JuceMidiFilePlayer::millisToTicks(int millis){
@@ -291,6 +300,7 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
     //starting at zero!
     
     looper.alternativeUpdateToBeat(millisToBeats(millisCounter));
+    prophet.alternativeUpdateToBeat(millisToBeats(millisCounter));
     
 }
 

@@ -80,17 +80,17 @@ prophetButton("prophet reverse")// deviceManager()
     prophetReversedValue.referTo(midiPlayer.prophet.reversedValue);
     
     //add midi menu
-    addAndMakeVisible (midiOutputBox);
-	midiOutputBox.setTextWhenNoChoicesAvailable ("No MIDI Output Enabled");
+    addAndMakeVisible (midiProphetOutputBox);
+	midiProphetOutputBox.setTextWhenNoChoicesAvailable ("No MIDI Output Enabled");
 	const StringArray midiOutputs (MidiOutput::getDevices());
-	midiOutputBox.addItemList (midiOutputs, 1);
-	midiOutputBox.addListener (this);
+	midiProphetOutputBox.addItemList (midiOutputs, 1);
+	midiProphetOutputBox.addListener (this);
 	midiOutputDevice = NULL;
     
    
     
     addAndMakeVisible (midiLooperOutputBox);
-	midiOutputBox.setTextWhenNoChoicesAvailable ("No MIDI Looper Output Enabled");
+	midiProphetOutputBox.setTextWhenNoChoicesAvailable ("No MIDI Looper Output Enabled");
 	const StringArray midiLooperOutputs (MidiOutput::getDevices());
 	midiLooperOutputBox.addItemList (midiLooperOutputs, 1);
 	midiLooperOutputBox.addListener (this);
@@ -105,6 +105,9 @@ prophetButton("prophet reverse")// deviceManager()
 	midiMoogInputBox.addItemList (midiInputs, 1);
 	midiMoogInputBox.addListener (this);
 	midiMoogInputDevice = NULL;
+    
+    midiMoogInputBox.setSelectedId(2);
+    midiLooperOutputBox.setSelectedId(2);
     
     
     // find the first enabled device and use that bu default
@@ -123,7 +126,9 @@ prophetButton("prophet reverse")// deviceManager()
 	midiProphetInputBox.addListener (this);
 	midiProphetInputDevice = NULL;
     
-    resized();
+    midiProphetOutputBox.setSelectedId(1);
+    midiProphetInputBox.setSelectedId(1);
+
     
     lastBeatIndex = -1;//to recognise new beat info
     
@@ -132,13 +137,20 @@ prophetButton("prophet reverse")// deviceManager()
     midiPlayer.looper.messageListBox.setModel (&midiPlayer.looper.midiLogListBoxModel);
     midiPlayer.looper.messageListBox.setColour (ListBox::backgroundColourId, Colour (0x32ffffff));
     midiPlayer.looper.messageListBox.setColour (ListBox::outlineColourId, Colours::black);
+    
+    addAndMakeVisible (midiPlayer.prophet.messageListBox);
+    midiPlayer.prophet.messageListBox.setModel (&midiPlayer.prophet.midiLogListBoxModel);
+    midiPlayer.prophet.messageListBox.setColour (ListBox::backgroundColourId, Colour (0x32ffffff));
+    midiPlayer.prophet.messageListBox.setColour (ListBox::outlineColourId, Colours::black);
 
+    
+    resized();//at bottom of setup
 }
 
 MainContentComponent::~MainContentComponent()
 {
     //need this stuff??
-    midiOutputBox.removeListener(this);
+    midiProphetOutputBox.removeListener(this);
     midiLooperOutputBox.removeListener(this);
     midiProphetInputBox.removeListener(this);
     midiMoogInputBox.removeListener(this);
@@ -226,8 +238,8 @@ void MainContentComponent::labelTextChanged(Label* labelThatHasChanged){
 
 void MainContentComponent::comboBoxChanged(ComboBox* box)//override
 {
-	if (box == &midiOutputBox){
-		midiOutputDevice = MidiOutput::openDevice(midiOutputBox.getSelectedItemIndex());
+	if (box == &midiProphetOutputBox){
+		midiOutputDevice = MidiOutput::openDevice(midiProphetOutputBox.getSelectedItemIndex());
         midiPlayer.prophet.midiOutDevice = midiOutputDevice;
         
     } else if (box == &midiLooperOutputBox){
@@ -343,24 +355,32 @@ void MainContentComponent::resized()
     // This is called when the MainContentComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
+    float generalInfoY = 0.8;
+    float prophetX = 0.08;
+    beatInfo.setBoundsRelative(prophetX, generalInfoY, 0.35, 0.05);
+    systemTimeInfo.setBoundsRelative(prophetX, generalInfoY+0.06, 0.35, 0.05);
+    tempoInfo.setBoundsRelative(prophetX, generalInfoY+0.12, 0.35, 0.05);
+
+    float prophetY = 0.06;
+    float height = 0.06;
+    prophetLabel.setBoundsRelative(prophetX, prophetY, 0.4, 0.05);
+    midiProphetInputBox.setBoundsRelative(prophetX, prophetY+height, 0.3, 0.05);
+    midiProphetOutputBox.setBoundsRelative(prophetX,prophetY+2*height,0.3,0.05);
     
-    beatInfo.setBounds(20,20,100,40);
-    systemTimeInfo.setBounds(20,40,200,40);
-    tempoInfo.setBounds(20,60,100,40);
+    prophetButton.setBoundsRelative(prophetX, prophetY+0.18, 0.25, 0.05);
     
-    prophetLabel.setBoundsRelative(0.65, 0.25, 0.4, 0.05);
-    looperLabel.setBoundsRelative(0.35, 0.35, 0.4, 0.05);
     
-    midiOutputBox.setBoundsRelative(0.05,0.25,0.3,0.05);
-    midiLooperOutputBox.setBoundsRelative(0.05, 0.35, 0.3, 0.05);
+    float moogX = 0.5;
     
-    midiMoogInputBox.setBoundsRelative(0.05,0.65,0.3,0.05);
-    midiProphetInputBox.setBoundsRelative(0.05, 0.75, 0.3, 0.05);
-    
-    prophetButton.setBoundsRelative(0.35, 0.25, 0.25, 0.05);
+    looperLabel.setBoundsRelative(moogX, prophetY, 0.4, 0.05);
+    midiMoogInputBox.setBoundsRelative(moogX,prophetY+height,0.3,0.05);
+    midiLooperOutputBox.setBoundsRelative(moogX, prophetY+2*height, 0.3, 0.05);
+
     
     Rectangle<int> area (getLocalBounds());
-    midiPlayer.looper.messageListBox.setBoundsRelative(0.5, 0.5, 0.45, 0.45);
+    midiPlayer.looper.messageListBox.setBoundsRelative(moogX, prophetY+4*height, 0.4, 0.45);
+    
+    midiPlayer.prophet.messageListBox.setBoundsRelative(prophetX, prophetY+4*height, 0.4, 0.45);
 }
 
 

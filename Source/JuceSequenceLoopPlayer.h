@@ -152,7 +152,7 @@ public:
     //not particularly keen on this one but
     int* milliscounter;
     float* tempoMillis;
-
+    bool setupCorrect;
     
 private:
     Array<MidiMessage> midiMessageList;
@@ -212,5 +212,11 @@ private:
         messageListBox.repaint();
     }
     
+    
+    MidiMessageSequence recordedSequence;
+    void newRecordedMessageIn(const MidiMessage& message, float& beatTime);
+    bool recordingOn;
+    
+
 };
 #endif /* defined(__JuceAbletonMidiFilePlayer__JuceSequenceLoopPlayer__) */

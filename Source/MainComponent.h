@@ -60,7 +60,7 @@ private:
     
     void newAbletonBeatReceived(float beatIndex, float tempo, unsigned long systemTimeAbleton);
     //menu for midi devices
-    ComboBox midiOutputBox;
+    ComboBox midiProphetOutputBox;
     ComboBox midiLooperOutputBox;
     
     ComboBox midiProphetInputBox;

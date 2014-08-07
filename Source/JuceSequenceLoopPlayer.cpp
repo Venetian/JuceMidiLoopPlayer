@@ -49,11 +49,14 @@
 JuceSequenceLoopPlayer::JuceSequenceLoopPlayer() : midiLogListBoxModel (midiMessageList){
     ppq = 480; 
     //set loop
+    
+    setupCorrect = false;
+    
     loopStartTicks = 0;
     loopEndTicks = ppq*16;//4 beat loop of beginning
     
     
-    setLoopPointsBeats(0, 16);
+    setLoopPointsBeats(0, 8);
 //    loopStartBeats = 0;
   //  loopEndBeats = 16;
    // loopWidthBeats = loopEndBeats-loopStartBeats;
@@ -204,6 +207,9 @@ float JuceSequenceLoopPlayer::getModulo(float& highValue, float& moduloValue){
 void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
     //new alternative update based on beats
 
+    if (!setupCorrect)
+        std::cout << "please call setup routine first" << std::endl;
+    
     currentGlobalBeatPosition = newBeat;
     
     float beatNow = getLoopPosition(newBeat);
@@ -224,6 +230,15 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
             checkOutput(loopStartBeats, beatNow);
         
             lastBeatPosition = beatNow;
+        }
+        
+        
+        if (recordingOn){
+            recordedSequence.updateMatchedPairs();
+            beatDefinedSequence = recordedSequence;
+            recordingOn = false;
+            std::cout << name << ": xsc RECORDING_SEQUENCE" << std::endl;
+            printSequenceEvents(recordedSequence);
         }
     }
     else if (beatNow > lastBeatPosition && ! checkLock){
@@ -302,7 +317,8 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
                 float beatDifference = beatDefinedSequence.getEventTime(offIndex) - beatDefinedSequence.getEventTime(outputCheckIndex);
                 int millisScheduled = *milliscounter + beatsToMillis(beatDifference);
                 std::cout << name << "millis now " <<  *milliscounter << ", scheduled off time " << millisScheduled << std::endl;
-                int channel = beatDefinedSequence.getEventPointer(outputCheckIndex)->message.getChannel();
+                
+                //int channel = beatDefinedSequence.getEventPointer(outputCheckIndex)->message.getChannel();
                 
                 //add the scheduled note off and send out note on out
                 if (offIndex >= 0 && offIndex < beatDefinedSequence.getNumEvents()){
@@ -355,18 +371,22 @@ void JuceSequenceLoopPlayer::sendMessageOut(MidiMessage& m){
 
 #pragma mark MidiMessageIn
 void JuceSequenceLoopPlayer::newMidiMessage(const MidiMessage& message, float& beatTime){
-    const uint8* data = message.getRawData();
-    std::cout << name << " received " << (int)data[0] << ", " << (int)data[1] << ", " << (int)data[2] << std::endl;
+    
+    
     MidiMessage copyMessage = message;
-    
     copyMessage.setTimeStamp(beatTime);
-    
     midiMessageList.add (copyMessage);
     
     triggerAsyncUpdate();
     
     float tmp = lastMidiMessageInTime();
-    std::cout << "last time " << tmp << std::endl;
+    
+    const uint8* data = message.getRawData();
+    std::cout << name << " received " << (int)data[0] << ", " << (int)data[1] << ", " << (int)data[2];
+    std::cout << "at time " << beatTime << ", previous midi message time " << tmp << std::endl;
+    
+    newRecordedMessageIn(message, beatTime);
+    
 }
 
 float JuceSequenceLoopPlayer::lastMidiMessageInTime(){
@@ -376,6 +396,24 @@ float JuceSequenceLoopPlayer::lastMidiMessageInTime(){
         return -1;
 }
 
+
+void JuceSequenceLoopPlayer::newRecordedMessageIn(const MidiMessage& message, float& beatTime){
+    if (message.isNoteOnOrOff()){
+        
+        if (!recordingOn){
+            //start recording
+            recordingOn = true;
+            std::cout << name << "xsc RECORDING STARTED" << std::endl;
+            recordedSequence.clear();
+        }
+        
+        MidiMessage copyMessage = message;
+        copyMessage.setTimeStamp(getLoopPosition(beatTime));
+        recordedSequence.addEvent(copyMessage);
+        const uint8* data = message.getRawData();
+        std::cout << name << " add recorded event " << (int)message.getNoteNumber() << ": midi " << (int)data[0] << ", " << (int)data[1] << ", at time " << getLoopPosition(beatTime) << std::endl;
+        }
+}
 
 
 void JuceSequenceLoopPlayer::updateMidiPlayPositionToTickPosition(double startTick, double tickPosition){
