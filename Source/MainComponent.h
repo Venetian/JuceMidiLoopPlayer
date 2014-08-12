@@ -51,6 +51,7 @@ public:
     
     Value prophetNoteValue;
     
+    Value midiViewValue;
     
     void handleIncomingMidiMessage (MidiInput* source, const MidiMessage& message) ;
  //   void handleIncomingMidiMessageMoog (MidiInput* source, const MidiMessage& message) ;

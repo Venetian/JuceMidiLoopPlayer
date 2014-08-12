@@ -35,7 +35,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     playbackSpeed = 1.0;
     
     String location;
-    int fileToLoad = 4;
+    int fileToLoad = 6;
     switch (fileToLoad){
         case 0:
            location = "../../../../exampleMidiFiles/midiScale.mid";
@@ -55,6 +55,9 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
         case 5:
             location = "../../../../exampleMidiFiles/TaurusBasslineHalftime.mid";
             break;
+        case 6:
+            location = "/Users/andrewrobertson/Music/HigamosSynchotron/elkamonia research/elka bass notes midi.mid";
+            break;
     }
     prophet.name = "PROPHET";
     looper.name = "MOOG";
@@ -66,12 +69,12 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     
     looper.setSequence(loadedSequence, ppq);
     
-    looper.printSequenceEvents(looper.transformedSequence);
+   // looper.printSequenceEvents(looper.transformedSequence);
     std::cout << "LOADED" << std::endl;
     
     //looper.reverseOriginal();
     //looper.invertOriginal();
-    looper.printSequenceEvents(looper.beatDefinedSequence);
+    looper.printSequenceEvents(looper.beatDefinedSequence, looper.loopEndBeats);
     
     //important so we start clock and midi
     //is there better way for this?
@@ -79,8 +82,20 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     beatPeriod = 500;
     lastAltBeatTimeMillis = 0;
     
+    
+    
+    prophet.midiViewer.setBounds(60, 350, 320, 100);
+    looper.midiViewer.setBounds(400, 350, 320, 100);
+    
+    looper.viewerValue = &midiViewerValue;
+    prophet.viewerValue = &midiViewerValue;
    // startTimer(1);
     
+}
+
+void JuceMidiFilePlayer::resized(){
+    looper.resized();
+    prophet.resized();
 }
 
 void JuceMidiFilePlayer::setUp(JuceSequenceLoopPlayer& player){
@@ -145,6 +160,8 @@ void JuceMidiFilePlayer::stopMidiPlayback(){
     }
     beatsReceived.clear();
     
+    std::cout << "PROPHET BEAT DEFINED SEQ" << std::endl;
+    prophet.printSequenceEvents(prophet.beatDefinedSequence);
     
 }
 
@@ -186,7 +203,7 @@ void JuceMidiFilePlayer::newBeat(float beatIndex, float tempoMillis, int latency
 }
 
 
-
+/*
 void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
    
   //  looper.updatePlaybackToBeat(beatIndex);//, millisCounter);
@@ -198,6 +215,7 @@ void JuceMidiFilePlayer::updatePlaybackToBeat(int beatIndex){
     
 
 }
+ */
 
 unsigned long long JuceMidiFilePlayer::systemTime(){
 	struct timeval now;
@@ -520,9 +538,9 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
                     if (event->message.isNoteOnOrOff()){
                         MidiMessage tmpMsg(data[0], data[1], data[2], tmp);
                        
-                       
                         //event->message.setChannel(1);
                         emptySequence.addEvent(tmpMsg);//event->message);
+                        
                     }
                     
                     std::cout << "data " << (int)data[0] << ", ";// std::endl;
@@ -556,6 +574,8 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
         }//end for track index
 
       
+        filterNotesOfZeroDuration(loadedSequence);
+        
         return loadedSequence;
     /*
         std::cout << "LOOP seq " << std::endl;
@@ -567,8 +587,32 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
       */
         
     }//end main if not dir
+    return loadedSequence;//but it's empty
     
 }
+
+
+void JuceMidiFilePlayer::filterNotesOfZeroDuration(MidiMessageSequence& sequence){
+    
+    sequence.updateMatchedPairs();
+    printSequenceEvents(sequence);
+    
+    int i = sequence.getNumEvents();
+    i--;
+    while (i >= 0){
+        if (sequence.getEventPointer(i)->message.isNoteOn()){
+            if (sequence.getEventTime(i) == sequence.getEventTime(sequence.getIndexOfMatchingKeyUp(i)) ){
+                std::cout << "REMOVE " << i << std::endl;
+                sequence.deleteEvent(i, true);
+            }
+        }
+        i--;
+    }
+    
+    std::cout << "AFTER REMOVAL " << std::endl;
+    printSequenceEvents(sequence);
+}
+
 
 void JuceMidiFilePlayer::printSequenceEvents(const MidiMessageSequence& sequence){
     

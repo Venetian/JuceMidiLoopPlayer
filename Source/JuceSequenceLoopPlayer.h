@@ -13,6 +13,8 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
+#include "MidiSequenceViewer.h"
+
 //#include "JuceMidiFilePlayer.h"
 
 static String getMidiMessageDescription (const MidiMessage& m)
@@ -95,8 +97,8 @@ public:
     void stopMidiPlayback();
     
    // void reverseSequence(MidiMessageSequence& sequence, float startStamp, float endStamp);
-    
     void printSequenceEvents(const MidiMessageSequence& sequence);
+    void printSequenceEvents(const MidiMessageSequence& sequence, float maxBeat);
 
 
 
@@ -118,6 +120,7 @@ public:
     
     void setSequence(const MidiMessageSequence& sequence);
     
+    void checkHangingNote(const MidiMessage& message, float& beatTime);
 
     float lastMidiMessageInTime();
     //transforms
@@ -153,6 +156,15 @@ public:
     int* milliscounter;
     float* tempoMillis;
     bool setupCorrect;
+    
+    //info about notes sent out
+    float noteOutBeatTime;//variable for the viewer only
+    int noteOutVelocity;
+    
+    MidiSequenceViewer midiViewer;//box to see midi notes
+    
+    void resized();
+    Value* viewerValue;
     
 private:
     Array<MidiMessage> midiMessageList;
@@ -217,6 +229,8 @@ private:
     void newRecordedMessageIn(const MidiMessage& message, float& beatTime);
     bool recordingOn;
     
+    
+
 
 };
 #endif /* defined(__JuceAbletonMidiFilePlayer__JuceSequenceLoopPlayer__) */

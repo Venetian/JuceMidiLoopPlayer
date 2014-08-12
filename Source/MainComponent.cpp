@@ -16,7 +16,7 @@
 MainContentComponent::MainContentComponent() : finder("abletonSync", OSC_RECEIVER_PORT),
 prophetButton("prophet reverse")// deviceManager()
 {
-    setSize (500, 400);
+    setSize (800, 600);
 
   //finder.init();
     
@@ -42,6 +42,8 @@ prophetButton("prophet reverse")// deviceManager()
     tempoValue.referTo(finder.tempoVal);
     tempoValue.addListener(this);
     
+    midiViewValue.referTo(midiPlayer.midiViewerValue);
+    midiViewValue.addListener(this);
     
     //these above not really what we want to start
     finder.tempoVal = 400;//150bpm default
@@ -65,6 +67,7 @@ prophetButton("prophet reverse")// deviceManager()
     tempoInfo.addListener(this);
     addAndMakeVisible(&tempoInfo);
     
+    //labels listen out to values within the midi classes
     prophetLabel.setText("prophet info", sendNotification);
     prophetLabel.addListener(this);
     addAndMakeVisible(&prophetLabel);
@@ -76,7 +79,6 @@ prophetButton("prophet reverse")// deviceManager()
     prophetButton.addListener(this);
     addAndMakeVisible(&prophetButton);
     prophetReversedValue.addListener(this);
-    prophetReversedValue = 0;
     prophetReversedValue.referTo(midiPlayer.prophet.reversedValue);
     
     //add midi menu
@@ -179,22 +181,30 @@ void MainContentComponent::valueChanged(Value& value){
 
         newAbletonBeatReceived((float)beatValue.getValue(), (float)tempoValue.getValue(), (int)sysTimeValue.getValue());
         
-    } else if (value == sysTimeValue){
-        systemTimeInfo.setText("sysTime "+value.toString(), dontSendNotification);
-        std::cout << "sys time changed"<< std::endl;
     } else if (value == tempoValue){
         tempoInfo.setText("tempo "+value.toString(), dontSendNotification);
         std::cout << " tempo changed " << value.toString() << std::endl;
     } else if (value == prophetNoteValue){
-        prophetLabel.setText(value.toString(), dontSendNotification);
+        String tmp = value.toString();
+        tmp += " ";
+        tmp += String(midiPlayer.prophet.noteOutBeatTime) + " ";
+        tmp += String(midiPlayer.prophet.noteOutVelocity);
+        prophetLabel.setText(tmp, dontSendNotification);
     } else if (value == prophetReversedValue){
+         std::cout << "prophet reversed val changed"<< std::endl;
         if ((int)prophetReversedValue.getValue() == 1)
             prophetButton.setButtonText("reversed");
-        else if ((int)prophetReversedValue.getValue() == 0)
+        else if ((int)prophetReversedValue.getValue() == 3)
             prophetButton.setButtonText("original");
         else if ((int)prophetReversedValue.getValue() == 2)
             prophetButton.setButtonText("inverted");
-    }
+    } else if (value == sysTimeValue){
+        systemTimeInfo.setText("sysTime "+value.toString(), dontSendNotification);
+        std::cout << "sys time changed"<< value.toString() << std::endl;
+    } else if (value == midiViewValue){
+        repaint();
+    } else
+        std::cout << "other value changed " << std::endl;
 
 }
 
@@ -278,8 +288,10 @@ void MainContentComponent::comboBoxChanged(ComboBox* box)//override
 //    std::cout << "midi in moog" << std::endl;
 //}
 
+#pragma mark MidiInputReceived
 void MainContentComponent::handleIncomingMidiMessage (MidiInput* source, const MidiMessage& message) {
     std::cout << "midi in '" << source->getName() << "' " << message.getRawDataSize() << " bytes" << std::endl;
+    
     //std::cout << source.getDevice
     float tmpTimeNow = midiPlayer.beatsNow();
     if (source->getName() == moogInputName)
@@ -319,12 +331,13 @@ void newInput(){
 
 void MainContentComponent::buttonClicked(Button* button){
     if (button == &prophetButton){
-        prophetReversedValue.setValue( (int)prophetReversedValue.getValue()+1);
-        int newVal = (int)prophetReversedValue.getValue();
-        if (newVal == 3){
-            prophetReversedValue.setValue(0);
-            newVal = 0;
+       // prophetReversedValue.setValue( (int)prophetReversedValue.getValue()+1);
+        int newVal = (int)prophetReversedValue.getValue()+1;
+        if (newVal > 3){
+            newVal -= 3;
         }
+        
+        
         
         switch (newVal){
             case 1:
@@ -333,11 +346,14 @@ void MainContentComponent::buttonClicked(Button* button){
             case 2:
                 midiPlayer.prophet.invertOriginal();
                 break;
-            case 0:
+            case 3:
                 midiPlayer.prophet.revertToOriginal();
                 break;
         }
+        std::cout << "set prophet value " << newVal << std::endl;
+        prophetReversedValue.setValue(newVal);
     }
+    repaint();
 }
 
 void MainContentComponent::paint (Graphics& g)
@@ -348,6 +364,9 @@ void MainContentComponent::paint (Graphics& g)
     g.setColour (Colours::black);
     g.drawText ("listening on "+String(OSC_RECEIVER_PORT), getLocalBounds(), Justification::top, true);
     //g.drawText (beatInfo.getText(), getLocalBounds(), Justification::topLeft, true);
+    
+    midiPlayer.prophet.midiViewer.draw(g);
+    midiPlayer.looper.midiViewer.draw(g);
 }
 
 void MainContentComponent::resized()
@@ -378,9 +397,13 @@ void MainContentComponent::resized()
 
     
     Rectangle<int> area (getLocalBounds());
-    midiPlayer.looper.messageListBox.setBoundsRelative(moogX, prophetY+4*height, 0.4, 0.45);
+    midiPlayer.looper.messageListBox.setBoundsRelative(moogX, prophetY+4*height, 0.4, 0.15);
     
-    midiPlayer.prophet.messageListBox.setBoundsRelative(prophetX, prophetY+4*height, 0.4, 0.45);
+    midiPlayer.prophet.messageListBox.setBoundsRelative(prophetX, prophetY+4*height, 0.4, 0.15);
+    
+    
+    
+    midiPlayer.resized();
 }
 
 

@@ -48,6 +48,10 @@ public:
     
     std::vector<AbletonBeat> beatsReceived;
     float beatsNow();
+    
+    void resized();
+    
+    Value midiViewerValue;//change it to redraw
 private:
     
     float playbackSpeed;
@@ -89,8 +93,11 @@ private:
     //MidiMessageSequence loopSequence, mutatedSequence;//loop what we play, mutate for the transformed version
 
     void printSequenceEvents(const MidiMessageSequence& sequence);//to see what is in sequences
+    void filterNotesOfZeroDuration(MidiMessageSequence& sequence);
     
     void bufferTest();//not needed
+    
+    
 
 };
 #endif /* defined(__JuceAbletonMidiFilePlayer__JuceMidiFilePlayer__) */
