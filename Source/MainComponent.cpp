@@ -28,8 +28,11 @@ prophetButton("prophet reverse")// deviceManager()
     finder.startThread();
     
     //set up listeners here for new values in our osc class that listens to ableton
-    finder.beatVal.setValue(-1);
-    beatValue.setValue(finder.beatVal.getValue());
+    //finder.beatVal.setValue(-1);
+    //beatValue.setValue(finder.beatVal.getValue());
+    
+    
+    //set up all the values to refer to finder object (ableton osc links)
     beatValue.referTo(finder.beatVal);
     beatValue.addListener(this);
     
@@ -38,19 +41,23 @@ prophetButton("prophet reverse")// deviceManager()
     sysTimeValue.addListener(this);
     sysTimeValue.referTo(finder.sysTimeVal);
     
-    tempoValue.setValue(-1);
+    //tempoValue.setValue(-1);
     tempoValue.referTo(finder.tempoVal);
     tempoValue.addListener(this);
-    
-    midiViewValue.referTo(midiPlayer.midiViewerValue);
-    midiViewValue.addListener(this);
     
     //these above not really what we want to start
     finder.tempoVal = 400;//150bpm default
     finder.beatVal = -1;//to set it to the STOP position
     
     
-    prophetNoteValue.setValue(-1);
+    
+    midiViewValue.referTo(midiPlayer.midiViewerValue);
+    midiViewValue.addListener(this);
+    
+
+    
+    
+    //prophetNoteValue.setValue(-1);
     prophetNoteValue.addListener(this);
     prophetNoteValue.referTo(midiPlayer.prophet.noteOnValue);
     
@@ -406,44 +413,4 @@ void MainContentComponent::resized()
     midiPlayer.resized();
 }
 
-
-
-/*
- 
- JUNK MIDI INPUT STUFF
- if (midiMoogInputDevice != nullptr)
- midiMoogInputDevice->stop();
- 
- midiMoogInputDevice = MidiInput::openDevice(midiMoogInputBox.getSelectedItemIndex(), this);
- midiMoogInputDevice->start();
- */
-
-/*
- int index = 0;
- const StringArray list (MidiInput::getDevices());
- 
- std::cout << list.size() << std::endl;
- 
- for (int i = 0; i < list.size(); i++)
- std::cout << list[i].toStdString() << std::endl;
- 
- 
- deviceManager.removeMidiInputCallback (list[lastInputIndex], this);
- 
- const String newInput (list[index]);
- 
- if (! deviceManager.isMidiInputEnabled (newInput))
- deviceManager.setMidiInputEnabled (newInput, true);
- 
- deviceManager.addMidiInputCallback (list[index], this);//MidiInput::getDevices()[midiMoogInputBox.getSelectedItemIndex()], this);
- 
- //std::cout << "add midi call in " << index << " " << list[index] << std::endl;
- */
-
-
-//midiPlayer.looper.midiInputDevice = midiMoogInputDevice;
-
-//replace above with this:
-//setMidiInput(midiMoogInputBox.getSelectedItemIndex());
-// std::cout << "set midi in " << midiMoogInputBox.getSelectedItemIndex() << " " << list[midiMoogInputBox.getSelectedItemIndex()] << std::endl;
 

@@ -35,7 +35,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     playbackSpeed = 1.0;
     
     String location;
-    int fileToLoad = 6;
+    int fileToLoad = 4;
     switch (fileToLoad){
         case 0:
            location = "../../../../exampleMidiFiles/midiScale.mid";
@@ -89,6 +89,29 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     
     looper.viewerValue = &midiViewerValue;
     prophet.viewerValue = &midiViewerValue;
+    
+    patternSequencer.setLoopPoints(looper.loopStartBeats, looper.loopEndBeats);
+    patternSequencer.loadSequence(looper.beatDefinedSequence);
+    /*
+    std::cout << "swap elements " << std::endl;
+    MidiMessage m = patternSequencer.pitchSet[0];
+    std::cout << "before " << m.getNoteNumber() << " pitch 0 is " << m.getNoteNumber() << " pitch 1 is " << patternSequencer.pitchSet[1].getNoteNumber() <<  std::endl;
+    if (patternSequencer.pitchSet[0].isNoteOn()){
+        patternSequencer.pitchSet[0].setNoteNumber(52);//patternSequencer.pitchSet[1].getNoteNumber());
+       // m.setNoteNumber(patternSequencer.pitchSet[0].getNoteNumber());
+        patternSequencer.pitchSet[1].setNoteNumber(m.getNoteNumber());
+        std::cout << "pitch changed " << m.getNoteNumber() << std::endl;
+    }
+    //patternSequencer.pitchSet[1].setNoteNumber(m.getNoteNumber());
+    std::cout << "after pitch 0 is " << patternSequencer.pitchSet[0].getNoteNumber() << " pitch 1 is " << patternSequencer.pitchSet[1].getNoteNumber() <<  std::endl;
+     */
+    
+    patternSequencer.pitchSet.swap(0,1);
+    patternSequencer.printPitchSet();
+    patternSequencer.reorderPitchSetAndRhythm();
+    patternSequencer.generateOutputSequence(looper.beatDefinedSequence);
+    std::cout << "PATTERN GENERATED " << std::endl;
+    printSequenceEvents(looper.beatDefinedSequence);
    // startTimer(1);
     
 }
@@ -323,133 +346,6 @@ void JuceMidiFilePlayer::updateMidiPlayPosition(){
 }
 
 
-
-
-/*
- 
- void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(double position){
- //THIS CLASS
- //updateMidiPlayPositionToTickPosition(loopSequence, position);
- 
- //time in ticks since beattick is position - beattick
- //for looper
- position -= beatTick;
- 
- //defunnkt
- looper.updateTicksSinceLastBeat(position);//i.e. position-beatTick , time since beat happened
- prophet.updateTicksSinceLastBeat(position);
- }
-void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(MidiMessageSequence& sequence, float tickPosition){
-    
-     //this not needed - we already have index from the last time
-     //could be good check though?
-    // int tmpCounter = (int)(millisCounter * playbackSpeed);
-    // while (midiPlayIndex < numEvents && trackSequence.getEventTime(midiPlayIndex) < tmpCounter){
-     //we have caught up to where we are, maybe we should be optimising this though from last time it was called?
-    // midiPlayIndex++;
-    // }
-     
-    
-    int numEvents = sequence.getNumEvents();
-    int useCount = (int)tickPosition;//(int)(millisCounter * playbackSpeed);//relative to 1ms = 1 tick
-    
-    MidiMessageSequence::MidiEventHolder* outputEvent;
-    
-    while (midiPlayIndex < numEvents && sequence.getEventTime(midiPlayIndex) < useCount){
-        //we have caught up to where we are
-        // index++;
-        //std::cout << "play index " << midiPlayIndex << " at time " << trackSequence.getEventTime(midiPlayIndex) << std::endl;
-        
-        if (midiPlayIndex >= 0){
-            
-            outputEvent = sequence.getEventPointer(midiPlayIndex);
-            
-            if (outputEvent->message.isNoteOnOrOff()){
-                if (midiDevice != NULL)
-                    midiDevice->sendMessageNow(outputEvent->message);
-                
-                if (outputEvent->message.isNoteOn()){
-                    int tmp = sequence.getIndexOfMatchingKeyUp(midiPlayIndex);
-                    std::cout << "MidiFilePlayer: NOTE ON,  index " << midiPlayIndex << " has up key " << tmp << std::endl;
-                    std::cout << "tick position " << useCount << std::endl;
-                } else {
-                    std::cout << "NOTE Off, index " << midiPlayIndex << std::endl;
-                }
-            }
-            else
-                std::cout << "event " << midiPlayIndex << " is not note on/off" << std::endl;
-            
-        }//end if midiplayindex
-        
-        midiPlayIndex++;
-        
-        int64 timenow = juce::Time::currentTimeMillis();
-        std::cout << "timer callback " << timenow << std::endl;
-        
-    }
-    
-    outputEvent = NULL;
-    delete outputEvent;
-    
-}
-*/
-
-//update a buffer to play
-//store an interator
-//when our iterator hits the end or the next event is beyond
-
-/*
-void JuceMidiFilePlayer::updateMidiPlayPositionToTickPositionWithLooping(MidiMessageSequence& sequence, float tickPosition){
-    
-    //have a loop buffer
-    //and an iterator
-    //position in the buffer
-    
-    
-    int numEvents = sequence.getNumEvents();
-    int useCount = (int)tickPosition;//(int)(millisCounter * playbackSpeed);//relative to 1ms = 1 tick
-    
-    MidiMessageSequence::MidiEventHolder* outputEvent;
-    
-    while (midiPlayIndex < numEvents && sequence.getEventTime(midiPlayIndex) < useCount){
-        //we have caught up to where we are
-        // index++;
-        //std::cout << "play index " << midiPlayIndex << " at time " << trackSequence.getEventTime(midiPlayIndex) << std::endl;
-        
-        if (midiPlayIndex >= 0){
-            
-            outputEvent = sequence.getEventPointer(midiPlayIndex);
-            
-            if (outputEvent->message.isNoteOnOrOff()){
-                if (midiDevice != NULL)
-                    midiDevice->sendMessageNow(outputEvent->message);
-                
-                if (outputEvent->message.isNoteOn()){
-                    int tmp = sequence.getIndexOfMatchingKeyUp(midiPlayIndex);
-                    std::cout << "NOTE ON,  index " << midiPlayIndex << " has up key " << tmp << std::endl;
-                    std::cout << "tick position " << useCount << std::endl;
-                } else {
-                    std::cout << "NOTE Off, index " << midiPlayIndex << std::endl;
-                }
-            }
-            else
-                std::cout << "event " << midiPlayIndex << " is not note on/off" << std::endl;
-            
-        }//end if midiplayindex
-        
-        midiPlayIndex++;
-        
-        int64 timenow = juce::Time::currentTimeMillis();
-        std::cout << "timer callback " << timenow << std::endl;
-        
-    }
-    
-    outputEvent = NULL;
-    delete outputEvent;
-    
-}
-
-*/
 
 MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool mergeOn){
     
@@ -788,3 +684,131 @@ loopTest{
     emptyLoop.updateMatchedPairs();
 }
 */
+
+
+
+/*
+ 
+ void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(double position){
+ //THIS CLASS
+ //updateMidiPlayPositionToTickPosition(loopSequence, position);
+ 
+ //time in ticks since beattick is position - beattick
+ //for looper
+ position -= beatTick;
+ 
+ //defunnkt
+ looper.updateTicksSinceLastBeat(position);//i.e. position-beatTick , time since beat happened
+ prophet.updateTicksSinceLastBeat(position);
+ }
+ void JuceMidiFilePlayer::updateMidiPlayPositionToTickPosition(MidiMessageSequence& sequence, float tickPosition){
+ 
+ //this not needed - we already have index from the last time
+ //could be good check though?
+ // int tmpCounter = (int)(millisCounter * playbackSpeed);
+ // while (midiPlayIndex < numEvents && trackSequence.getEventTime(midiPlayIndex) < tmpCounter){
+ //we have caught up to where we are, maybe we should be optimising this though from last time it was called?
+ // midiPlayIndex++;
+ // }
+ 
+ 
+ int numEvents = sequence.getNumEvents();
+ int useCount = (int)tickPosition;//(int)(millisCounter * playbackSpeed);//relative to 1ms = 1 tick
+ 
+ MidiMessageSequence::MidiEventHolder* outputEvent;
+ 
+ while (midiPlayIndex < numEvents && sequence.getEventTime(midiPlayIndex) < useCount){
+ //we have caught up to where we are
+ // index++;
+ //std::cout << "play index " << midiPlayIndex << " at time " << trackSequence.getEventTime(midiPlayIndex) << std::endl;
+ 
+ if (midiPlayIndex >= 0){
+ 
+ outputEvent = sequence.getEventPointer(midiPlayIndex);
+ 
+ if (outputEvent->message.isNoteOnOrOff()){
+ if (midiDevice != NULL)
+ midiDevice->sendMessageNow(outputEvent->message);
+ 
+ if (outputEvent->message.isNoteOn()){
+ int tmp = sequence.getIndexOfMatchingKeyUp(midiPlayIndex);
+ std::cout << "MidiFilePlayer: NOTE ON,  index " << midiPlayIndex << " has up key " << tmp << std::endl;
+ std::cout << "tick position " << useCount << std::endl;
+ } else {
+ std::cout << "NOTE Off, index " << midiPlayIndex << std::endl;
+ }
+ }
+ else
+ std::cout << "event " << midiPlayIndex << " is not note on/off" << std::endl;
+ 
+ }//end if midiplayindex
+ 
+ midiPlayIndex++;
+ 
+ int64 timenow = juce::Time::currentTimeMillis();
+ std::cout << "timer callback " << timenow << std::endl;
+ 
+ }
+ 
+ outputEvent = NULL;
+ delete outputEvent;
+ 
+ }
+ */
+
+//update a buffer to play
+//store an interator
+//when our iterator hits the end or the next event is beyond
+
+/*
+ void JuceMidiFilePlayer::updateMidiPlayPositionToTickPositionWithLooping(MidiMessageSequence& sequence, float tickPosition){
+ 
+ //have a loop buffer
+ //and an iterator
+ //position in the buffer
+ 
+ 
+ int numEvents = sequence.getNumEvents();
+ int useCount = (int)tickPosition;//(int)(millisCounter * playbackSpeed);//relative to 1ms = 1 tick
+ 
+ MidiMessageSequence::MidiEventHolder* outputEvent;
+ 
+ while (midiPlayIndex < numEvents && sequence.getEventTime(midiPlayIndex) < useCount){
+ //we have caught up to where we are
+ // index++;
+ //std::cout << "play index " << midiPlayIndex << " at time " << trackSequence.getEventTime(midiPlayIndex) << std::endl;
+ 
+ if (midiPlayIndex >= 0){
+ 
+ outputEvent = sequence.getEventPointer(midiPlayIndex);
+ 
+ if (outputEvent->message.isNoteOnOrOff()){
+ if (midiDevice != NULL)
+ midiDevice->sendMessageNow(outputEvent->message);
+ 
+ if (outputEvent->message.isNoteOn()){
+ int tmp = sequence.getIndexOfMatchingKeyUp(midiPlayIndex);
+ std::cout << "NOTE ON,  index " << midiPlayIndex << " has up key " << tmp << std::endl;
+ std::cout << "tick position " << useCount << std::endl;
+ } else {
+ std::cout << "NOTE Off, index " << midiPlayIndex << std::endl;
+ }
+ }
+ else
+ std::cout << "event " << midiPlayIndex << " is not note on/off" << std::endl;
+ 
+ }//end if midiplayindex
+ 
+ midiPlayIndex++;
+ 
+ int64 timenow = juce::Time::currentTimeMillis();
+ std::cout << "timer callback " << timenow << std::endl;
+ 
+ }
+ 
+ outputEvent = NULL;
+ delete outputEvent;
+ 
+ }
+ 
+ */

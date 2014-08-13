@@ -14,6 +14,8 @@
 
 #include "JuceSequenceLoopPlayer.h"
 
+#include "JucePatternSequencer.h"
+
 struct AbletonBeat{
 public:
     float index;//
@@ -29,6 +31,8 @@ public:
     ~JuceMidiFilePlayer();
     
     MidiFile midiFile;
+    
+    JucePatternSequencer patternSequencer;
     
     MidiMessageSequence loadMidiFile(String fileLocation, bool mergeOn);
     

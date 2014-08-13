@@ -12,6 +12,9 @@
 
 #include "OSCfinder.h"
 
+//tend to use the fact that the values change below - beat and tempo
+//to call other functions in our main project
+
 class OSCAbletonFinder : public OSCfinder{
 public:
     
