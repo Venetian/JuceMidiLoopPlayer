@@ -358,6 +358,9 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
             } else if (beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOff()){
                 std::cout << name << ": NOTE_OFF (" << outputCheckIndex << ") pitch " << beatDefinedSequence.getEventPointer(outputCheckIndex)->message.getNoteNumber() << " at " <<  tmpTime << ", millis " << *milliscounter << std::endl;
                 
+            } else {
+                //so must be something else
+                sendMessageOut(beatDefinedSequence.getEventPointer(outputCheckIndex)->message);
             }
             
         }
@@ -443,19 +446,33 @@ void JuceSequenceLoopPlayer::newRecordedMessageIn(const MidiMessage& message, fl
             checkHangingNote(message, beatTime);
         }
         
-        float loopTime = getLoopPosition(beatTime);
+        float loopTime = quantise(getLoopPosition(beatTime));
             
         MidiMessage copyMessage = message;
         copyMessage.setTimeStamp(getLoopPosition(loopTime));
         recordedSequence.addEvent(copyMessage);
         const uint8* data = message.getRawData();
         std::cout << name << " add recorded event " << (int)message.getNoteNumber() << ": midi " << (int)data[0] << ", " << (int)data[1] << ", at time " << beatTime << " loop time " << getLoopPosition(beatTime) << std::endl;
+        } else {
+        //not note on or off - recording into the sequence - visualisation??
+            MidiMessage copyMessage = message;
+            float loopTime = getLoopPosition(beatTime);
+            copyMessage.setTimeStamp(getLoopPosition(loopTime));
+            recordedSequence.addEvent(copyMessage);
+            const uint8* data = message.getRawData();
+            std::cout << name << " add NON-NOTE recorded event: " << (int)data[0] << ", " << (int)data[1] << ", at time " << beatTime << " loop time " << loopTime << std::endl;
+            
         }
     } else{
+        //i.e beattime < 0
         const uint8* data = message.getRawData();
         std::cout << name << " midi " << (int)data[0] << ", " << (int)data[1] << ", at time " << getLoopPosition(beatTime) << std::endl;
         std::cout << "out of time" << std::endl;
     }
+}
+
+float JuceSequenceLoopPlayer::quantise(const float& eventTime){
+    return (roundf(eventTime*SIXTEENTH_NOTES)/SIXTEENTH_NOTES);
 }
 
 void JuceSequenceLoopPlayer::checkHangingNote(const MidiMessage& message, float& beatTime){

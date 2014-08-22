@@ -13,6 +13,8 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
+#define EIGHTH_NOTES 2
+#define SIXTEENTH_NOTES 4
 
 class MidiMessageArraySorter
 {

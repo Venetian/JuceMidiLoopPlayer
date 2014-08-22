@@ -35,7 +35,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     playbackSpeed = 1.0;
     
     String location;
-    int fileToLoad = 4;
+    int fileToLoad = 6;
     switch (fileToLoad){
         case 0:
            location = "../../../../exampleMidiFiles/midiScale.mid";

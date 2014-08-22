@@ -15,6 +15,8 @@
 
 #include "MidiSequenceViewer.h"
 
+#define EIGHTH_NOTES 2
+#define SIXTEENTH_NOTES 4
 //#include "JuceMidiFilePlayer.h"
 
 static String getMidiMessageDescription (const MidiMessage& m)
@@ -227,10 +229,12 @@ private:
     
     MidiMessageSequence recordedSequence;
     void newRecordedMessageIn(const MidiMessage& message, float& beatTime);
+    float quantise(const float& eventTime);
+    
     bool recordingOn;
     
     
-
+    Button* transformButton;//for what operations we do
 
 };
 #endif /* defined(__JuceAbletonMidiFilePlayer__JuceSequenceLoopPlayer__) */

@@ -117,6 +117,10 @@ void JucePatternSequencer::newMidiMessage(MidiMessage& message){
         }
         
         outputSequence.addEvent(message);
+    } else {
+        //incomplete
+        rhythmPattern.addEvent(message);
+        outputSequence.addEvent(message);
     }
 
 }
@@ -151,8 +155,18 @@ void JucePatternSequencer::generateOutputSequence(MidiMessageSequence& sequence)
     sequence.clear();
     for (int i = 0; i < rhythmPattern.getNumEvents(); i++){
         MidiMessage m = rhythmPattern.getEventPointer(i)->message;
-        int indexInPitchSet = rhythmPattern.getEventPointer(i)->message.getNoteNumber();
-        m.setNoteNumber(pitchSet[indexInPitchSet].getNoteNumber());
+        if (m.isNoteOnOrOff()){
+            int indexInPitchSet = rhythmPattern.getEventPointer(i)->message.getNoteNumber();
+            m.setNoteNumber(pitchSet[indexInPitchSet].getNoteNumber());
+            //quantise
+            if (m.isNoteOn()){
+                float time = m.getTimeStamp();
+                m.setTimeStamp((double)round(time*SIXTEENTH_NOTES)/SIXTEENTH_NOTES);
+                printf("quantiser time %f, quant %f\n", time, (double)round(time*SIXTEENTH_NOTES)/SIXTEENTH_NOTES );
+            }
+        } else {
+            printf("adding non not-on-off %i\n", m.getControllerValue());
+        }
         sequence.addEvent(m);
     }
     sequence.updateMatchedPairs();
