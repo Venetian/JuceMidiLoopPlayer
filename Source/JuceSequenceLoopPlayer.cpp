@@ -56,7 +56,7 @@ JuceSequenceLoopPlayer::JuceSequenceLoopPlayer() : midiLogListBoxModel (midiMess
     loopEndTicks = ppq*16;//4 beat loop of beginning
     
     
-    setLoopPointsBeats(0, 16);
+    setLoopPointsBeats(0, 32);
 //    loopStartBeats = 0;
   //  loopEndBeats = 16;
    // loopWidthBeats = loopEndBeats-loopStartBeats;
@@ -238,6 +238,8 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
         //normal
          std::cout << "gone round to " << beatNow << "  (actual beat " << newBeat << ") from lastBeatPosition " <<lastBeatPosition << std::endl;
         if (!checkLock){
+            //bug here if hanging note??
+            
             checkOutput(lastBeatPosition, loopEndBeats);
             outputCheckIndex = 0;//so we check from beginning again
             checkOutput(loopStartBeats, beatNow);
@@ -278,9 +280,11 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
 void JuceSequenceLoopPlayer::checkNoteOffs(){
     int index = 0;
     while (index < scheduledEvents.getNumEvents() && scheduledEvents.getEventTime(index) < *milliscounter){
-        sendMessageOut(scheduledEvents.getEventPointer(index)->message);
-        std::cout << name << " sending note off " << scheduledEvents.getEventPointer(index)->message.getNoteNumber() << " at " << scheduledEvents.getEventPointer(index)->message.getTimeStamp() << std::endl;
-        scheduledEvents.deleteEvent(index, false);
+        if (scheduledEvents.getEventPointer(index)!=NULL){
+            sendMessageOut(scheduledEvents.getEventPointer(index)->message);
+            std::cout << name << " sending note off " << scheduledEvents.getEventPointer(index)->message.getNoteNumber() << " at " << scheduledEvents.getEventPointer(index)->message.getTimeStamp() << std::endl;
+            scheduledEvents.deleteEvent(index, false);
+        }
     }
 }
 
@@ -351,8 +355,8 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
                 } else {
                     std::cout << name << " STRANGE, POINTER DOESNT EXIST FOR index " << offIndex << " events " << beatDefinedSequence.getNumEvents() << std::endl;
                 }
-            
-                sendMessageOut(beatDefinedSequence.getEventPointer(outputCheckIndex)->message);
+                MidiMessage outMessage = beatDefinedSequence.getEventPointer(outputCheckIndex)->message;//debug to prevent pointer craching
+                sendMessageOut(outMessage);
                 noteOutBeatTime = beatDefinedSequence.getEventTime(outputCheckIndex);
                 
             } else if (beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOff()){
@@ -396,6 +400,7 @@ void JuceSequenceLoopPlayer::sendMessageOut(MidiMessage& m){
     if (midiOutDevice != nullptr){// && m.isNoteOn())
         
         midiOutDevice->sendMessageNow(m);
+       
         if (m.isNoteOn()){
             noteOnValue = m.getNoteNumber();
             noteOutVelocity = m.getVelocity();

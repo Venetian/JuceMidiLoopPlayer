@@ -35,7 +35,7 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     playbackSpeed = 1.0;
     
     String location;
-    int fileToLoad = 6;
+    int fileToLoad = 8;
     switch (fileToLoad){
         case 0:
            location = "../../../../exampleMidiFiles/midiScale.mid";
@@ -58,6 +58,13 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
         case 6:
             location = "/Users/andrewrobertson/Music/HigamosSynchotron/elkamonia research/elka bass notes midi.mid";
             break;
+        case 7:
+            location = "/Users/andrewrobertson/Music/HigamosSynchotron/my trav 90 bpm research/MyTravelBassline.mid";
+            break;
+        case 8:
+            location = "/Users/andrewrobertson/Music/HigamosSynchotron/comm_solo.mid";
+            break;
+            
     }
     prophet.name = "PROPHET";
     looper.name = "MOOG";
@@ -106,9 +113,11 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     std::cout << "after pitch 0 is " << patternSequencer.pitchSet[0].getNoteNumber() << " pitch 1 is " << patternSequencer.pitchSet[1].getNoteNumber() <<  std::endl;
      */
     
-    patternSequencer.pitchSet.swap(0,1);
-    patternSequencer.printPitchSet();
-    patternSequencer.reorderPitchSetAndRhythm();
+    if (1 == 2){
+        patternSequencer.pitchSet.swap(0,1);
+        patternSequencer.printPitchSet();
+        patternSequencer.reorderPitchSetAndRhythm();
+    }
     patternSequencer.generateOutputSequence(looper.beatDefinedSequence);
     std::cout << "PATTERN GENERATED " << std::endl;
     printSequenceEvents(looper.beatDefinedSequence);
