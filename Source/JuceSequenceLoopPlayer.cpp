@@ -55,7 +55,6 @@ JuceSequenceLoopPlayer::JuceSequenceLoopPlayer() : midiLogListBoxModel (midiMess
     loopStartTicks = 0;
     loopEndTicks = ppq*16;//4 beat loop of beginning
     
-    
     setLoopPointsBeats(0, 32);
 //    loopStartBeats = 0;
   //  loopEndBeats = 16;
@@ -87,6 +86,7 @@ JuceSequenceLoopPlayer::JuceSequenceLoopPlayer() : midiLogListBoxModel (midiMess
     
     midiViewer.setSequence(beatDefinedSequence);
 
+    recordedNoteOffHappened = false;//not really needed in setup
    
 }
 
@@ -276,6 +276,8 @@ void JuceSequenceLoopPlayer::alternativeUpdateToBeat(const float& newBeat){
 
     checkNoteOffs();
     
+    checkLoopRecordingEnded(newBeat);
+    
 }
 
 void JuceSequenceLoopPlayer::checkNoteOffs(){
@@ -295,7 +297,14 @@ void JuceSequenceLoopPlayer::checkNoteOffs(){
 }
 
 
-
+void JuceSequenceLoopPlayer::checkLoopRecordingEnded(const float& beatTime){
+    if (recordingOn && recordedNoteOffHappened){
+        if (beatTime > lastRecordedBeatTime + 0.5){
+            std::cout << "END RECORDING?" << std::endl;
+        }
+            
+    }
+}
 
 
 
@@ -319,7 +328,7 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
         if (tmpTime >= lastBeatTime && tmpTime < beatTime){
             //output event
 
-            if (beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOn()){
+            if (!recordingOn && beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOn()){
                 std::cout << name << ": NOTE_ON (" << outputCheckIndex << ")" << " pitch " << beatDefinedSequence.getEventPointer(outputCheckIndex)->message.getNoteNumber() << " time " << tmpTime << std::endl;
                 
                 int offIndex = beatDefinedSequence.getIndexOfMatchingKeyUp(outputCheckIndex);
@@ -348,7 +357,7 @@ void JuceSequenceLoopPlayer::checkOutput(float& lastBeatTime, const float& beatT
             } else if (beatDefinedSequence.getEventPointer(outputCheckIndex)->message.isNoteOff()){
                 std::cout << name << ": NOTE_OFF (" << outputCheckIndex << ") pitch " << beatDefinedSequence.getEventPointer(outputCheckIndex)->message.getNoteNumber() << " at " <<  tmpTime << ", millis " << *milliscounter << std::endl;
                 
-            } else {
+            } else if (!recordingOn){
                 //so must be something else
                 sendMessageOut(beatDefinedSequence.getEventPointer(outputCheckIndex)->message);
             }
@@ -433,6 +442,7 @@ void JuceSequenceLoopPlayer::newRecordedMessageIn(const MidiMessage& message, fl
                 sendAllScheduledNoteOffs();
                 std::cout << name << "xsc RECORDING STARTED" << std::endl;
                 recordedSequence.clear();
+                recordedNoteOffHappened = false;
 
             } else {
                 std::cout << "maybe this is hanging note?" << std::endl;
@@ -450,9 +460,11 @@ void JuceSequenceLoopPlayer::newRecordedMessageIn(const MidiMessage& message, fl
             std::cout << name << " add recorded event " << (int)message.getNoteNumber() << ": midi " << (int)data[0] << ", " << (int)data[1] << ", at time " << beatTime << " loop time " << getLoopPosition(beatTime) << std::endl;
         
             
-            if (message.isNoteOn())
+            if (message.isNoteOff()){
                 lastRecordedBeatTime = beatTime;
-            
+                recordedNoteOffHappened = false;
+                std::cout << "LAST_RECORDED_BEAT_TIME " << beatTime << std::endl;
+            }
         } else {
         //not note on or off - recording into the sequence - visualisation??
             MidiMessage copyMessage = message;

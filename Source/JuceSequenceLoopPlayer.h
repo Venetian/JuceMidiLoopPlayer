@@ -222,6 +222,8 @@ private:
     
     void addNoteOff(MidiMessage& message, int millisTime);
     void checkNoteOffs();
+    void checkLoopRecordingEnded(const float& beatTime);
+ 
     bool checkLock;
     void handleAsyncUpdate()
     {
@@ -237,7 +239,8 @@ private:
     
     bool recordingOn;
     float lastRecordedBeatTime;
-    
+    bool recordedNoteOffHappened;
+
     Button* transformButton;//for what operations we do
 
 };
