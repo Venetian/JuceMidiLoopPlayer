@@ -11,7 +11,7 @@
 
 
 void OSCAbletonFinder::init(){
-
+    beatVal = 0;
 }
 
 //void OSCAbletonFinder::valueChanged(Value* tmpValue){}

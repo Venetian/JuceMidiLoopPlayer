@@ -18,7 +18,7 @@ prophetButton("prophet reverse")// deviceManager()
 {
     setSize (800, 600);
 
-  //finder.init();
+    finder.init();
     
 //    deviceManager = new AudioDeviceManager();
     deviceManager.initialise(2, 2, 0, true, String::empty, 0);
@@ -33,6 +33,7 @@ prophetButton("prophet reverse")// deviceManager()
     
     
     //set up all the values to refer to finder object (ableton osc links)
+    beatValue .setValue(finder.beatVal);
     beatValue.referTo(finder.beatVal);
     beatValue.addListener(this);
     

@@ -35,7 +35,14 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     playbackSpeed = 1.0;
     
     String location;
-    int fileToLoad = 8;
+    String moogLocation = "";
+    
+    int key = 0;
+    int soloKey = 0;
+    
+    
+    int fileToLoad = 7;
+    
     switch (fileToLoad){
         case 0:
            location = "../../../../exampleMidiFiles/midiScale.mid";
@@ -51,30 +58,105 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
             break;
         case 4:
             location = "../../../../exampleMidiFiles/KingKongBassline.mid";
+            moogLocation = "../../../../exampleMidiFiles/KingKongBassline.mid";
             break;
         case 5:
             location = "../../../../exampleMidiFiles/TaurusBasslineHalftime.mid";
+            moogLocation = location;
+            key = 2;//?
             break;
         case 6:
-            location = "/Users/andrewrobertson/Music/HigamosSynchotron/elkamonia research/elka bass notes midi.mid";
+            moogLocation = "/Users/andrewrobertson/Music/HigamosSynchotron/elkamonia research/elka bass notes midi.mid";
+            key = 0;
             break;
         case 7:
-            location = "/Users/andrewrobertson/Music/HigamosSynchotron/my trav 90 bpm research/MyTravelBassline.mid";
+            moogLocation = "/Users/andrewrobertson/Music/HigamosSynchotron/my trav 90 bpm research/MyTravelBassline.mid";
+            key = 4;
             break;
         case 8:
-            location = "/Users/andrewrobertson/Music/HigamosSynchotron/comm_solo.mid";
+            //location = "/Users/andrewrobertson/Music/HigamosSynchotron/comm_solo.mid";
+            moogLocation = "../../../../exampleMidiFiles/KingKongBassline.mid";
+            key = 2;
             break;
+        case 9:
+            location = "/Users/andrewrobertson/Music/HigamosSynchotron/ZeppelinMidi/led_zeppelin-candy_store_rock.mid";
+            break;
+        case 10:
+            moogLocation = "/Users/andrewrobertson/Music/HigamosSynchotron/ZeppelinMidi/led_zeppelin-black_dog.mid";
+            key = 9;
+            break;
+        
+            
             
     }
+    //zep communication breakdown
+    int zepSolo = 3;
+    switch (zepSolo){
+    case 0:
+        location = "/Users/andrewrobertson/Music/HigamosSynchotron/comm_solo.mid";
+        soloKey = 4;//e minor
+        break;
+    case 1:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/Darlene_solo.mid";
+        soloKey = 2;
+        break;
+    case 2:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/CelebrationDay3_solo.mid";
+        soloKey = 9;
+        break;
+    case 3:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/StairwayToHeaven_solo.mid";
+        soloKey = 9;
+        break;
+    case 4:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/RoyalOrleans_solo.mid";
+        soloKey = 9;
+        break;
+    case 5:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/NobodysFaultButMine_solo.mid";
+        soloKey = 4;//or 9??
+        break;
+    case 6:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/richie_hallelujah_solo.mid";
+        soloKey = 9;//??
+        break;
+    case 7:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/InMyTimeOfDying_solo.mid";
+        soloKey = 9;//a minor
+        break;
+    case 8:
+        location = "/Users/andrewrobertson/Music/Logic/ZepSolos/RambleOn_solo.mid";
+        soloKey = 4;
+        break;
+    default:
+        moogLocation = location;
+        soloKey = key;
+        break;
+    }
+   
+    
     prophet.name = "PROPHET";
     looper.name = "MOOG";
     midiDevice = NULL;
     
+    std::cout << "LOAD PROPHET SEQ:" << std::endl;
     MidiMessageSequence loadedSequence = loadMidiFile(location, true);//true for merging all
-   
-    prophet.setSequence(loadedSequence, ppq);
     
-    looper.setSequence(loadedSequence, ppq);
+    MidiMessageSequence moogSequence;
+    std::cout << "LOAD MOOG SEQ:" << std::endl;
+    if (moogLocation != "")
+        moogSequence = loadMidiFile(moogLocation, true);
+    else
+        moogSequence = loadedSequence;
+    
+    looper.setLoopPointsBeats(0, 16);
+    prophet.setLoopPointsBeats(0, 64 );
+    
+    
+    prophet.setSequence(loadedSequence, ppq);
+    prophet.transposeSequence((key + 12 - soloKey)%12);
+    
+    looper.setSequence(moogSequence, ppq);
     
    // looper.printSequenceEvents(looper.transformedSequence);
     std::cout << "LOADED" << std::endl;
@@ -93,12 +175,37 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     
     prophet.midiViewer.setBounds(60, 350, 320, 100);
     looper.midiViewer.setBounds(400, 350, 320, 100);
-    
+
+    //to view??
     looper.viewerValue = &midiViewerValue;
     prophet.viewerValue = &midiViewerValue;
     
     patternSequencer.setLoopPoints(looper.loopStartBeats, looper.loopEndBeats);
     patternSequencer.loadSequence(looper.beatDefinedSequence);
+    
+    std::cout << "KEY ANALYSIS, key " << soloKey << std::endl;
+    /*
+    keyPatternAnalyser.clearSequence();//call before analysis;
+    keyPatternAnalyser.analyseSequence(prophet.beatDefinedSequence, soloKey);
+    
+    MidiMessageSequence testSequence;
+    int numPatterns = keyPatternAnalyser.soloPattern.size();
+    Random rnd;
+    
+    for (int bar = 0; bar < 8; bar++){
+        int pattern = std::abs(rnd.nextInt())%numPatterns;
+        keyPatternAnalyser.addToMidiSequence(testSequence, bar*4.0, pattern);
+        std::cout << "TEST_SEQ, bar " << bar << " pattern " << pattern << std::endl;
+    }
+    printSequenceEvents(testSequence);
+    prophet.beatDefinedSequence = testSequence;
+    prophet.beatDefinedSequence.updateMatchedPairs();
+    prophet.setLoopPointsBeats(0, 32);
+    */
+    
+    
+    doZeppelinPatterns();
+    
     /*
     std::cout << "swap elements " << std::endl;
     MidiMessage m = patternSequencer.pitchSet[0];
@@ -122,6 +229,71 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     std::cout << "PATTERN GENERATED " << std::endl;
     printSequenceEvents(looper.beatDefinedSequence);
    // startTimer(1);
+    
+}
+
+
+void JuceMidiFilePlayer::doZeppelinPatterns(){
+    int soloKey;
+    String location;
+    keyPatternAnalyser.clearSequence();//call before analysis;
+    MidiMessageSequence soloSequence;
+    
+    location = "/Users/andrewrobertson/Music/HigamosSynchotron/comm_solo.mid";
+    soloKey = 4;//e minor
+    soloSequence = loadMidiFile(location, true);
+    changeTicksToBeats(soloSequence);
+    keyPatternAnalyser.analyseSequence(soloSequence, soloKey);
+    
+    location = "/Users/andrewrobertson/Music/Logic/ZepSolos/Darlene_solo.mid";
+    soloKey = 2;
+    soloSequence = loadMidiFile(location, true);
+    changeTicksToBeats(soloSequence);
+    keyPatternAnalyser.analyseSequence(soloSequence, soloKey);
+    
+    location = "/Users/andrewrobertson/Music/Logic/ZepSolos/CelebrationDay3_solo.mid";
+    soloKey = 9;
+    soloSequence = loadMidiFile(location, true);
+    changeTicksToBeats(soloSequence);
+    keyPatternAnalyser.analyseSequence(soloSequence, soloKey);
+    
+    location = "/Users/andrewrobertson/Music/Logic/ZepSolos/StairwayToHeaven_solo.mid";
+    soloKey = 9;
+    soloSequence = loadMidiFile(location, true);
+    changeTicksToBeats(soloSequence);
+    keyPatternAnalyser.analyseSequence(soloSequence, soloKey);
+    /*
+     location = "/Users/andrewrobertson/Music/Logic/ZepSolos/RoyalOrleans_solo.mid";
+     soloKey = 9;
+     
+     location = "/Users/andrewrobertson/Music/Logic/ZepSolos/NobodysFaultButMine_solo.mid";
+     soloKey = 4;//or 9??
+     
+     location = "/Users/andrewrobertson/Music/Logic/ZepSolos/richie_hallelujah_solo.mid";
+     soloKey = 9;//??
+     
+     location = "/Users/andrewrobertson/Music/Logic/ZepSolos/InMyTimeOfDying_solo.mid";
+     soloKey = 9;//a minor
+     
+     location = "/Users/andrewrobertson/Music/Logic/ZepSolos/RambleOn_solo.mid";
+     soloKey = 4;
+     */
+    
+    
+    //generate new one
+    MidiMessageSequence testSequence;
+    int numPatterns = keyPatternAnalyser.soloPattern.size();
+    Random rnd;
+    
+    for (int bar = 0; bar < 16; bar++){
+        int pattern = std::abs(rnd.nextInt())%numPatterns;
+        keyPatternAnalyser.addToMidiSequence(testSequence, bar*4.0, pattern);
+        std::cout << "TEST_SEQ, bar " << bar << " pattern " << pattern << std::endl;
+    }
+    printSequenceEvents(testSequence);
+    prophet.beatDefinedSequence = testSequence;
+    prophet.beatDefinedSequence.updateMatchedPairs();
+    
     
 }
 
@@ -288,8 +460,10 @@ void JuceMidiFilePlayer::alternativeBeatCall(float& beatIndex, float& tempoMilli
     std::cout << "alt beat " << beatIndex << " tempo " << tempoMillis << " sys time " << timenow << " millis counter " << newBeat.millis << " ticks " << newBeat.ticks << ", beat estimate " << beatEstimate << std::endl;
     
     //not calling the looper yet
+    //could call a signle update routine?
+    //like updateMidiPlayPosition();
+  //just does this:
     looper.alternativeUpdateToBeat(beatIndex);
-    
     prophet.alternativeUpdateToBeat(beatIndex);
     
 }
@@ -362,7 +536,7 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
     File file(fileLocation);
     
     //TO DO: add some kind of check whether file exists!
-    
+    std::cout << "Load '" << fileLocation << "'" << std::endl;
     MidiMessageSequence loadedSequence;
     
     if (!file.isDirectory())
@@ -381,7 +555,7 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
         std::cout << "time format " << ppq << std::endl;
         
         
-        
+        bool printingInfo = false;
         
         std::cout << "Last Timestamp " << midiFile.getLastTimestamp() << std::endl;
         
@@ -393,6 +567,7 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
                 
                 //midi message sequence is pointer to a midi track, as loaded from a file
                 trackSequence = *midiFile.getTrack(trackIndex);//replaces empty holder with track 0
+                
                 
                 /*
                 if (trackIndex == COPY_TRACK_CHANNEL || loopSequence.getNumEvents() == 0)
@@ -408,55 +583,60 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
                  */
                 
                 std::cout << "LOADER: print midi track sequence as loaded, trackindex " << trackIndex << std::endl;
+                std::cout << "track " << trackIndex << " has " << trackSequence.getNumEvents() << " events" << std::endl;
+                
                 //printSequenceEvents(trackSequence);
             
                 //trackSequence.deleteSysExMessages();
-            
-                std::cout << "\ntrack 0 has " << trackSequence.getNumEvents() << " events" << std::endl;
                 
                 MidiMessageSequence::MidiEventHolder* event;//pointer to an individual midi event
                 
                 for (int i = 0; i < trackSequence.getNumEvents(); i++){
                     //can get this time info from the track sequence
                     double eventTime = trackSequence.getEventTime(i);
-                    std::cout << "Loading: event " << i << ": time " << eventTime;//<< std::endl;
+                    
                     
                     //or parse through the events themselves
                     event = trackSequence.getEventPointer(i);
                     
                     double tmp = event->message.getTimeStamp();
-                    std::cout << " t_stamp " << tmp << " ";//std::endl;
-                    
                     const uint8* data = event->message.getRawData();
-                    
-                    std::cout << "size " <<  event->message.getRawDataSize() << ", ";// << std::endl;
-                    
-                    std::cout << "chnl " << event->message.getChannel() << ", ";
-                    
-                    if (event->message.isNoteOn())
-                        std::cout << "note on  ";//<< std::endl;
-                    else if (event->message.isNoteOff())
-                        std::cout << "note off ";// << std::endl;
-                    else
-                        std::cout << "other    ";// << std::endl;
                     
                     if (event->message.isNoteOnOrOff()){
                         MidiMessage tmpMsg(data[0], data[1], data[2], tmp);
-                       
+                        
                         //event->message.setChannel(1);
                         emptySequence.addEvent(tmpMsg);//event->message);
                         
                     }
                     
-                    std::cout << "data " << (int)data[0] << ", ";// std::endl;
-                    std::cout << (int)data[1] << ", ";// std::endl;
-                    std::cout << (int)data[2] << std::endl;
-                    
+                    if (printingInfo){
+                        std::cout << "Loading: event " << i << ": time " << eventTime;//<< std::endl;
+                        std::cout << " t_stamp " << tmp << " ";//std::endl;
+                        std::cout << "size " <<  event->message.getRawDataSize() << ", ";// << std::endl;
+                        std::cout << "chnl " << event->message.getChannel() << ", ";
+                        
+                        if (event->message.isNoteOn())
+                            std::cout << "note on  ";//<< std::endl;
+                        else if (event->message.isNoteOff())
+                            std::cout << "note off ";// << std::endl;
+                        else
+                            std::cout << "other    ";// << std::endl;
+                        
+                        
+                        
+                        
+                    }
                     if (data[0] == 255){
+                        std::cout << "data track " << trackIndex << ", event " << i << ": " << (int)data[0] << ", ";// std::endl;
+                        std::cout << (int)data[1] << ", ";// std::endl;
+                        std::cout << (int)data[2] << std::endl;
+                    
                         for (int i = 3; i < event->message.getRawDataSize(); i++){
                             std::cout << "char[" << i-3 << "] :'" << data[i] << "'" << std::endl;
                         }
                     }
+                
                     
                 }//end for i
                 
@@ -500,23 +680,40 @@ MidiMessageSequence JuceMidiFilePlayer::loadMidiFile(String fileLocation, bool m
 void JuceMidiFilePlayer::filterNotesOfZeroDuration(MidiMessageSequence& sequence){
     
     sequence.updateMatchedPairs();
-    printSequenceEvents(sequence);
+    //printSequenceEvents(sequence);
     
     int i = sequence.getNumEvents();
     i--;
     while (i >= 0){
         if (sequence.getEventPointer(i)->message.isNoteOn()){
             if (sequence.getEventTime(i) == sequence.getEventTime(sequence.getIndexOfMatchingKeyUp(i)) ){
-                std::cout << "REMOVE " << i << std::endl;
                 sequence.deleteEvent(i, true);
+                //std::cout << "REMOVE " << i << std::endl;
             }
         }
         i--;
     }
     
-    std::cout << "AFTER REMOVAL " << std::endl;
-    printSequenceEvents(sequence);
+    //std::cout << "AFTER REMOVAL " << std::endl;
+    //printSequenceEvents(sequence);
 }
+
+
+void JuceMidiFilePlayer::changeTicksToBeats(MidiMessageSequence& sequence){
+    
+    std::cout <<"\nCHANGE TICKS TO BEATS" << std::endl;
+    //    printSequenceEvents(sequence);
+    
+    //might need to think if there were structural changes - eg to 5/8 or something?
+    for (int i = 0 ; i < sequence.getNumEvents(); i++){
+        double tmpTime = sequence.getEventTime(i);
+        //      std::cout << tmpTime << "-> " << tmpTime/ppq << std::endl;
+        sequence.getEventPointer(i)->message.setTimeStamp(tmpTime/ppq);
+    }
+   
+}
+
+
 
 
 void JuceMidiFilePlayer::printSequenceEvents(const MidiMessageSequence& sequence){

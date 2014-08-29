@@ -40,7 +40,9 @@ JucePatternSequencer::JucePatternSequencer(){
 }
 
 
-JucePatternSequencer::~JucePatternSequencer(){}
+JucePatternSequencer::~JucePatternSequencer(){
+    
+}
 //newBeatReceievd(){}
 
 
@@ -58,7 +60,8 @@ void JucePatternSequencer::loadSequence(MidiMessageSequence& sequence){
             if (sequence.getEventTime(i) >= *loopMin && sequence.getEventTime(i) <= *loopMax){
                 if (sequence.getEventPointer(i)->message.isNoteOn()){
                     newMidiMessage(sequence.getEventPointer(i)->message);
-                    newMidiMessage(sequence.getEventPointer(sequence.getIndexOfMatchingKeyUp(i))->message);//the matching note off
+                    newMidiMessage(sequence.getEventPointer(sequence.getIndexOfMatchingKeyUp(i))->message);
+                    //the matching note off
                 }
             }
         }

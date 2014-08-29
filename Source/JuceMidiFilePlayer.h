@@ -16,6 +16,8 @@
 
 #include "JucePatternSequencer.h"
 
+#include "JuceMidiKeyPattern.h"
+
 struct AbletonBeat{
 public:
     float index;//
@@ -33,8 +35,12 @@ public:
     MidiFile midiFile;
     
     JucePatternSequencer patternSequencer;
+    JuceMidiKeyPattern keyPatternAnalyser;
     
     MidiMessageSequence loadMidiFile(String fileLocation, bool mergeOn);
+    
+    void doZeppelinPatterns();
+    void changeTicksToBeats(MidiMessageSequence& sequence);
     
     void startMidiPlayback();
     void stopMidiPlayback();

@@ -94,6 +94,7 @@ public:
     void changeTicksToBeats(MidiMessageSequence& sequence);
     
     void reset();
+    void sendAllScheduledNoteOffs();
     
     void startMidiPlayback();
     void stopMidiPlayback();
@@ -101,6 +102,7 @@ public:
    // void reverseSequence(MidiMessageSequence& sequence, float startStamp, float endStamp);
     void printSequenceEvents(const MidiMessageSequence& sequence);
     void printSequenceEvents(const MidiMessageSequence& sequence, float maxBeat);
+
 
 
 
@@ -120,6 +122,9 @@ public:
     
     void invertSequence(MidiMessageSequence& invertedSequence, const MidiMessageSequence& sequence, int startStamp, int endStamp);
     
+    void transposeSequence(int notesInScale);
+    void transposeSequence(MidiMessageSequence& sequence, int notesInScale);
+    
     void setSequence(const MidiMessageSequence& sequence);
     
     void checkHangingNote(const MidiMessage& message, float& beatTime);
@@ -136,12 +141,13 @@ public:
     Value noteOnValue;
     void revertToOriginal();
     
-    void transposeSequence(int notesInScale);
+    
     Value reversedValue;
     
     //new update routines
     void alternativeUpdateToBeat(const float& beatNow);
-    void updateToBeatPosition(const float& beatPosition);
+    
+    //old void updateToBeatPosition(const float& beatPosition);
     
     float loopEndBeats;
     float loopStartBeats;
@@ -189,8 +195,6 @@ private:
     float getLoopPosition(const float& beatPosition);
     float getModulo(float& highValue, float& moduloValue);
     
-    std::vector<int> notesSentOut;
-//    int millisCounter;
     int midiPlayIndex;
     
     int loopStartTicks;//in beats Ticks;
@@ -232,7 +236,7 @@ private:
     float quantise(const float& eventTime);
     
     bool recordingOn;
-    
+    float lastRecordedBeatTime;
     
     Button* transformButton;//for what operations we do
 
