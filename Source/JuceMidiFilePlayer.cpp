@@ -149,8 +149,8 @@ JuceMidiFilePlayer::JuceMidiFilePlayer(){
     else
         moogSequence = loadedSequence;
     
-    looper.setLoopPointsBeats(0, 16);
-    prophet.setLoopPointsBeats(0, 64 );
+    looper.setLoopPointsBeats(0, 4);
+    prophet.setLoopPointsBeats(0, 32 );
     
     
     prophet.setSequence(loadedSequence, ppq);

@@ -223,7 +223,9 @@ private:
     void addNoteOff(MidiMessage& message, int millisTime);
     void checkNoteOffs();
     void checkLoopRecordingEnded(const float& beatTime);
- 
+    void endRecording();
+    void copyRecordedSequenceOver();
+    
     bool checkLock;
     void handleAsyncUpdate()
     {
